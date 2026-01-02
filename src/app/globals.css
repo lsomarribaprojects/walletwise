@@ -1,14 +1,24 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /*
- * Walletwise Theme
- * Personaliza tu tema aqui
+ * Profits OS - Neumorphism Theme
  */
 
-@theme {
-  --color-primary: #10b981;
-  --color-primary-dark: #059669;
-  --color-secondary: #334155;
-  --color-background: #0f172a;
-  --color-surface: #1e293b;
+:root {
+  --neu-bg: #e6e7ee;
+  --neu-dark: #b8b9be;
+  --neu-light: #ffffff;
+  --neu-text: #4a5568;
+  --neu-text-muted: #718096;
+  --neu-accent: #3b82f6;
+  --neu-success: #10b981;
+  --neu-warning: #f59e0b;
+  --neu-danger: #ef4444;
+}
+
+body {
+  background-color: var(--neu-bg);
+  color: var(--neu-text);
 }

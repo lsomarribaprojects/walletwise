@@ -1,12 +1,17 @@
+import { NavBar } from '@/shared/components/ui/NavBar'
+import { AgentSidebarProvider } from '@/shared/context/AgentSidebarContext'
+
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen">
-      {/* Nav, Sidebar, etc. */}
-      <main>{children}</main>
-    </div>
+    <AgentSidebarProvider>
+      <div className="h-screen bg-neu-bg flex flex-col overflow-hidden">
+        <NavBar />
+        <main className="flex-1 min-h-0 overflow-auto">{children}</main>
+      </div>
+    </AgentSidebarProvider>
   )
 }
