@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SaaS Factory App',
-  description: 'Built with SaaS Factory',
+  title: 'Walletwise - Gestion Financiera Inteligente',
+  description: 'Controla tus finanzas personales con insights inteligentes',
 }
 
 export default function RootLayout({

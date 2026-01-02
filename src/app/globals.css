@@ -1,6 +1,14 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 /*
- * Personaliza tu tema aquí
- * Documentación: https://tailwindcss.com/docs/theme
+ * Walletwise Theme
+ * Personaliza tu tema aqui
  */
+
+@theme {
+  --color-primary: #10b981;
+  --color-primary-dark: #059669;
+  --color-secondary: #334155;
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+}
