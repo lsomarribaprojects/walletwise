@@ -31,21 +31,59 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = ['/login', '/signup', '/forgot-password', '/check-email', '/update-password']
   const isPublicRoute = publicRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
+  // Ruta de espera de aprobación
+  const isPendingRoute = request.nextUrl.pathname === '/pending-approval'
+
   // Rutas de API (siempre permitidas)
   const isApiRoute = request.nextUrl.pathname.startsWith('/api')
 
   // Si no hay usuario y no es ruta pública ni API, redirigir a login
-  if (!user && !isPublicRoute && !isApiRoute) {
+  if (!user && !isPublicRoute && !isApiRoute && !isPendingRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Si hay usuario y está en ruta de auth, redirigir a home
-  if (user && isPublicRoute) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
+  // Si hay usuario, verificar estado de aprobación
+  if (user && !isApiRoute) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('status, role')
+      .eq('id', user.id)
+      .single()
+
+    // Si el usuario está pendiente o rechazado
+    if (profile && profile.status !== 'approved') {
+      // Si está en ruta pública, redirigir a pending-approval
+      if (isPublicRoute) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/pending-approval'
+        return NextResponse.redirect(url)
+      }
+
+      // Si no está en pending-approval, redirigir allí
+      if (!isPendingRoute) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/pending-approval'
+        return NextResponse.redirect(url)
+      }
+    }
+
+    // Si está aprobado y está en pending-approval o ruta pública, redirigir a home
+    if (profile && profile.status === 'approved' && (isPendingRoute || isPublicRoute)) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+
+    // Verificar acceso a /admin (solo admins)
+    if (request.nextUrl.pathname.startsWith('/admin')) {
+      if (!profile || profile.role !== 'admin') {
+        const url = request.nextUrl.clone()
+        url.pathname = '/'
+        return NextResponse.redirect(url)
+      }
+    }
   }
 
   return supabaseResponse

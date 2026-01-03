@@ -2,7 +2,11 @@ export interface Profile {
   id: string
   email: string
   full_name: string | null
-  avatar_url: string | null
+  avatar_url?: string | null
+  status: 'pending' | 'approved' | 'rejected'
+  role: 'user' | 'admin'
+  approved_at: string | null
+  approved_by: string | null
   created_at: string
   updated_at: string
 }

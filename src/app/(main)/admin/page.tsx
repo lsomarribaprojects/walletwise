@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Tags, Bot, Calculator, UserCircle, Loader2 } from 'lucide-react'
+import { Tags, Bot, Calculator, UserCircle, Loader2, Users } from 'lucide-react'
 import { useAdminConfig } from '@/features/admin/hooks/useAdminConfig'
 import { CategoryManager } from '@/features/admin/components/CategoryManager'
 import { AgentPromptEditor } from '@/features/admin/components/AgentPromptEditor'
 import { CalculatorSettings } from '@/features/admin/components/CalculatorSettings'
 import { AccountSection } from '@/features/admin/components/AccountSection'
+import { UserManagement } from '@/features/admin/components/UserManagement'
 
-type TabId = 'categories' | 'agent' | 'calculator' | 'account'
+type TabId = 'users' | 'categories' | 'agent' | 'calculator' | 'account'
 
 interface Tab {
   id: TabId
@@ -17,6 +18,7 @@ interface Tab {
 }
 
 const TABS: Tab[] = [
+  { id: 'users', label: 'Usuarios', icon: <Users className="w-4 h-4" /> },
   { id: 'categories', label: 'Categorias', icon: <Tags className="w-4 h-4" /> },
   { id: 'agent', label: 'CFO Agent', icon: <Bot className="w-4 h-4" /> },
   { id: 'calculator', label: 'Calculadora', icon: <Calculator className="w-4 h-4" /> },
@@ -24,7 +26,7 @@ const TABS: Tab[] = [
 ]
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<TabId>('categories')
+  const [activeTab, setActiveTab] = useState<TabId>('users')
   const {
     config,
     isLoading,
@@ -57,6 +59,8 @@ export default function AdminPage() {
     if (!config) return null
 
     switch (activeTab) {
+      case 'users':
+        return <UserManagement />
       case 'categories':
         return (
           <CategoryManager
@@ -111,7 +115,7 @@ export default function AdminPage() {
                 transition-all duration-200
                 ${
                   activeTab === tab.id
-                    ? 'bg-neu-bg shadow-neu-inset text-blue-600'
+                    ? 'bg-neu-bg shadow-neu-inset text-purple-600'
                     : 'bg-neu-bg shadow-neu text-gray-600 hover:shadow-neu-sm'
                 }
               `}
