@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { signup } from '@/actions/auth'
 import { NeuInput } from '@/shared/components/ui/NeuInput'
 import { NeuButton } from '@/shared/components/ui/NeuButton'
@@ -31,7 +32,7 @@ export function SignupForm() {
         <form action={handleSubmit} className="space-y-6">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
                 <Wallet className="w-7 h-7 text-white" />
               </div>
               <h1 className="text-3xl font-bold text-gray-800">Walletwise</h1>
@@ -80,7 +81,7 @@ export function SignupForm() {
 
           <NeuButton
             type="submit"
-            className="w-full"
+            className="w-full bg-purple-600 hover:bg-purple-700"
             size="lg"
             isLoading={loading}
           >
@@ -89,16 +90,29 @@ export function SignupForm() {
 
           <p className="text-center text-sm text-gray-500">
             Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline">
+            <Link href="/login" className="text-purple-600 hover:underline">
               Inicia sesion
             </Link>
           </p>
         </form>
       </NeuCard>
 
-      <p className="text-center text-xs text-gray-400 mt-6">
-        &copy; 2026 Sinsajo Creators. Todos los derechos reservados.
-      </p>
+      <div className="text-center mt-6 space-y-2">
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-xs text-gray-400">Desarrollado por</span>
+          <Image
+            src="/sinsajo-logo.png"
+            alt="Sinsajo Creators"
+            width={20}
+            height={20}
+            className="inline-block"
+          />
+          <span className="text-xs font-medium text-purple-600">Sinsajo Creators</span>
+        </div>
+        <p className="text-xs text-gray-400">
+          &copy; 2026 Sinsajo Creators. Todos los derechos reservados.
+        </p>
+      </div>
     </div>
   )
 }

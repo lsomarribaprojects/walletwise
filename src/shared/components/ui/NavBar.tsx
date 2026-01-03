@@ -49,7 +49,7 @@ export function NavBar() {
           {isCFOActive ? (
             <button
               onClick={() => openAgentSidebar(true)}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neu-bg shadow-neu text-gray-600 hover:text-blue-600 hover:shadow-neu-sm transition-all"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-neu-bg shadow-neu text-gray-600 hover:text-purple-600 hover:shadow-neu-sm transition-all"
               aria-label="Abrir historial"
             >
               <Menu className="w-5 h-5" />
@@ -57,7 +57,7 @@ export function NavBar() {
             </button>
           ) : (
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center">
                 <Wallet className="w-5 h-5 text-white" />
               </div>
               <span className="hidden sm:inline font-bold text-gray-800">Walletwise</span>
@@ -74,8 +74,8 @@ export function NavBar() {
                 transition-all duration-200 lg:px-4
                 ${
                   isCFOActive
-                    ? 'bg-neu-bg shadow-neu-inset text-blue-600'
-                    : 'bg-neu-bg shadow-neu text-gray-600 hover:text-blue-600 hover:shadow-neu-sm'
+                    ? 'bg-neu-bg shadow-neu-inset text-purple-600'
+                    : 'bg-neu-bg shadow-neu text-gray-600 hover:text-purple-600 hover:shadow-neu-sm'
                 }
               `}
             >
@@ -91,8 +91,8 @@ export function NavBar() {
                 transition-all duration-200 lg:px-4
                 ${
                   isDashboardActive
-                    ? 'bg-neu-bg shadow-neu-inset text-blue-600'
-                    : 'bg-neu-bg shadow-neu text-gray-600 hover:text-blue-600 hover:shadow-neu-sm'
+                    ? 'bg-neu-bg shadow-neu-inset text-purple-600'
+                    : 'bg-neu-bg shadow-neu text-gray-600 hover:text-purple-600 hover:shadow-neu-sm'
                 }
               `}
             >
@@ -110,8 +110,8 @@ export function NavBar() {
                   transition-all duration-200 lg:px-4
                   ${
                     isFinanceActive
-                      ? 'bg-neu-bg shadow-neu-inset text-blue-600'
-                      : 'bg-neu-bg shadow-neu text-gray-600 hover:text-blue-600 hover:shadow-neu-sm'
+                      ? 'bg-neu-bg shadow-neu-inset text-purple-600'
+                      : 'bg-neu-bg shadow-neu text-gray-600 hover:text-purple-600 hover:shadow-neu-sm'
                   }
                 `}
               >
@@ -142,8 +142,8 @@ export function NavBar() {
                           transition-all duration-200
                           ${
                             isActive
-                              ? 'bg-blue-50 text-blue-600'
-                              : 'text-gray-600 hover:bg-gray-50 hover:text-blue-600'
+                              ? 'bg-purple-50 text-purple-600'
+                              : 'text-gray-600 hover:bg-gray-50 hover:text-purple-600'
                           }
                         `}
                       >
@@ -162,10 +162,10 @@ export function NavBar() {
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   onBlur={() => setTimeout(() => setUserMenuOpen(false), 150)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-neu-bg shadow-neu text-gray-600 hover:text-blue-600 hover:shadow-neu-sm transition-all duration-200"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium bg-neu-bg shadow-neu text-gray-600 hover:text-purple-600 hover:shadow-neu-sm transition-all duration-200"
                 >
-                  <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center">
-                    <User className="w-4 h-4 text-blue-600" />
+                  <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-purple-600" />
                   </div>
                   <span className="hidden md:inline max-w-[120px] truncate">
                     {profile?.full_name || user.email?.split('@')[0]}
