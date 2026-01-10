@@ -1,12 +1,12 @@
-import { Transaction, GastoMensual, GastoAnual, CUENTAS, Cuenta, CuentaDB } from '../types'
+import { Transaction, GastoMensual, GastoAnual, CuentaDB, TipoCuenta } from '../types'
 
 export interface CuentaBalance {
-  cuenta: Cuenta
+  cuenta: string
   balance: number
   balanceInicial: number
   ingresos: number
   gastos: number
-  tipo: 'debito' | 'credito' | 'efectivo'
+  tipo: TipoCuenta
   color: string
 }
 
@@ -217,13 +217,14 @@ export function formatDateFull(dateStr: string): string {
 
 // Calcula balance por cuenta (con balance inicial de BD)
 // Incluye transferencias: salidas restan, entradas suman
+// Ahora usa las cuentas de la BD en lugar del array hardcodeado
 export function calculateBalancesByCuenta(
   transactions: Transaction[],
   cuentasDB: CuentaDB[]
 ): CuentaBalance[] {
-  return CUENTAS.map((cuenta) => {
+  return cuentasDB.map((cuentaInfo) => {
+    const cuenta = cuentaInfo.nombre
     const cuentaTransactions = transactions.filter((t) => t.cuenta === cuenta)
-    const cuentaInfo = cuentasDB.find((c) => c.nombre === cuenta)
 
     const ingresos = cuentaTransactions
       .filter((t) => t.tipo === 'ingreso')
@@ -243,8 +244,22 @@ export function calculateBalancesByCuenta(
       .filter((t) => t.tipo === 'transferencia' && t.cuenta_destino === cuenta)
       .reduce((sum, t) => sum + Number(t.monto), 0)
 
-    const balanceInicial = cuentaInfo?.balance_inicial ?? 0
+    const balanceInicial = cuentaInfo.balance_inicial ?? 0
     const balanceTransacciones = ingresos - gastos - transferenciasOut + transferenciasIn
+
+    // Convertir color hex a nombre de color para las clases CSS
+    const colorMap: Record<string, string> = {
+      '#9333EA': 'purple',
+      '#3B82F6': 'blue',
+      '#22C55E': 'emerald',
+      '#F59E0B': 'amber',
+      '#EF4444': 'red',
+      '#EC4899': 'pink',
+      '#06B6D4': 'cyan',
+      '#6366F1': 'indigo',
+      '#820AD1': 'purple',
+      '#FFD000': 'amber',
+    }
 
     return {
       cuenta,
@@ -252,8 +267,8 @@ export function calculateBalancesByCuenta(
       balanceInicial,
       ingresos,
       gastos,
-      tipo: cuentaInfo?.tipo ?? 'debito',
-      color: cuentaInfo?.color ?? 'gray',
+      tipo: cuentaInfo.tipo,
+      color: colorMap[cuentaInfo.color || ''] || 'gray',
     }
   })
 }

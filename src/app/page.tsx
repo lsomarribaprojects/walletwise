@@ -10,6 +10,8 @@ import { CategoryDistribution } from '@/features/finances/components/CategoryDis
 import { AccountsOverview } from '@/features/finances/components/AccountsOverview'
 import { TransactionsTable } from '@/features/finances/components/TransactionsTable'
 import { AddTransactionModal } from '@/features/finances/components/AddTransactionModal'
+import { AccountModal } from '@/features/finances/components/AccountModal'
+import { OnboardingWizard } from '@/features/onboarding/components'
 import {
   fetchTransactions,
   createTransaction,
@@ -17,13 +19,17 @@ import {
   deleteTransaction,
 } from '@/features/finances/services/transactions'
 import { fetchCuentas } from '@/features/finances/services/cuentas'
+import { createCuenta } from '@/features/finances/services/accountsService'
 import {
   summarizeByCategory,
   calculateBalancesByCuenta,
   calculateBalanceTotal,
 } from '@/features/finances/services/analytics'
-import { Transaction, TransactionInput, TipoTransaccion, CuentaDB } from '@/features/finances/types'
+import { Transaction, TransactionInput, TipoTransaccion, CuentaDB, CuentaInput } from '@/features/finances/types'
 import { QuickActionButtons } from '@/features/finances/components/QuickActionButtons'
+import { Footer } from '@/shared/components/ui/Footer'
+import { useLanguage } from '@/shared/i18n'
+import { HelpCircle } from 'lucide-react'
 
 export default function HomePage() {
   const {
@@ -40,8 +46,11 @@ export default function HomePage() {
   } = useFinancesStore()
 
   const { inputs } = useCalculatorStore()
+  const { t } = useLanguage()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
+  const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [initialTipo, setInitialTipo] = useState<TipoTransaccion | undefined>()
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
   const [gastosData, setGastosData] = useState<ReturnType<typeof summarizeByCategory>>([])
@@ -49,6 +58,7 @@ export default function HomePage() {
   const [cuentas, setCuentas] = useState<CuentaDB[]>([])
   const [balanceTotal, setBalanceTotal] = useState(0)
   const hasProcessedRecurring = useRef(false)
+  const hasCheckedOnboarding = useRef(false)
 
   // Procesar gastos recurrentes automáticamente al cargar
   const processRecurringExpenses = useCallback(async () => {
@@ -149,6 +159,30 @@ export default function HomePage() {
     setBalanceTotal(calculateBalanceTotal(balances))
   }
 
+  const handleAddAccount = async (cuenta: CuentaInput) => {
+    const newCuenta = await createCuenta(cuenta)
+    if (newCuenta) {
+      setCuentas((prev) => [...prev, newCuenta])
+    }
+  }
+
+  // Check if user needs onboarding (first time, no accounts)
+  useEffect(() => {
+    if (!hasCheckedOnboarding.current && !isLoading && cuentas.length === 0 && transactions.length === 0) {
+      hasCheckedOnboarding.current = true
+      // Check localStorage if wizard was completed
+      const wizardCompleted = localStorage.getItem('walletwise_onboarding_completed')
+      if (!wizardCompleted) {
+        setIsWizardOpen(true)
+      }
+    }
+  }, [isLoading, cuentas.length, transactions.length])
+
+  const handleWizardComplete = () => {
+    localStorage.setItem('walletwise_onboarding_completed', 'true')
+    setIsWizardOpen(false)
+  }
+
   return (
     <div className="min-h-screen bg-neu-bg">
       <NavBar />
@@ -158,12 +192,20 @@ export default function HomePage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-800">{t.dashboard.title}</h1>
               <p className="text-gray-500 mt-1">
-                Centro de control financiero
+                {t.dashboard.subtitle}
                 {inputs?.businessName && ` - ${inputs.businessName}`}
               </p>
             </div>
+            <button
+              onClick={() => setIsWizardOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-xl transition-colors"
+              title={t.dashboard.guide}
+            >
+              <HelpCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">{t.dashboard.guide}</span>
+            </button>
           </div>
 
 
@@ -173,25 +215,25 @@ export default function HomePage() {
             {/* KPIs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <FinanceKPI
-                title="Ingresos"
+                title={t.dashboard.income}
                 value={kpis.totalIngresos}
                 icon="income"
                 variant="positive"
               />
               <FinanceKPI
-                title="Gastos"
+                title={t.dashboard.expenses}
                 value={kpis.totalGastos}
                 icon="expense"
                 variant="negative"
               />
               <FinanceKPI
-                title="Balance"
+                title={t.dashboard.balance}
                 value={balanceTotal}
                 icon="balance"
                 variant={balanceTotal >= 0 ? 'positive' : 'negative'}
               />
               <FinanceKPI
-                title="Transacciones"
+                title={t.dashboard.transactions}
                 value={kpis.transaccionesCount}
                 icon="transactions"
                 variant="neutral"
@@ -205,18 +247,22 @@ export default function HomePage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <CategoryDistribution
                 data={gastosData}
-                title="Gastos por Categoría"
+                title={t.charts.expensesByCategory}
                 type="gasto"
               />
               <CategoryDistribution
                 data={ingresosData}
-                title="Ingresos por Categoría"
+                title={t.charts.incomeByCategory}
                 type="ingreso"
               />
             </div>
 
             {/* Accounts Overview */}
-            <AccountsOverview transactions={transactions} cuentas={cuentas} />
+            <AccountsOverview
+              transactions={transactions}
+              cuentas={cuentas}
+              onAddAccount={() => setIsAccountModalOpen(true)}
+            />
 
             {/* Table */}
             <TransactionsTable
@@ -229,6 +275,9 @@ export default function HomePage() {
         </div>
       </main>
 
+      {/* Footer */}
+      <Footer />
+
       {/* Modal */}
       <AddTransactionModal
         isOpen={isModalOpen}
@@ -236,11 +285,26 @@ export default function HomePage() {
         onSubmit={handleAddTransaction}
         onUpdate={handleUpdateTransaction}
         initialTipo={initialTipo}
+        cuentas={cuentas}
         editTransaction={editTransaction}
       />
 
       {/* Quick Action FABs */}
       <QuickActionButtons onQuickAction={handleQuickAction} />
+
+      {/* Account Modal */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        onSave={handleAddAccount}
+      />
+
+      {/* Onboarding Wizard */}
+      <OnboardingWizard
+        isOpen={isWizardOpen}
+        onClose={() => setIsWizardOpen(false)}
+        onComplete={handleWizardComplete}
+      />
     </div>
   )
 }

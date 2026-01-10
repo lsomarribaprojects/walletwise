@@ -1,13 +1,8 @@
-// Cuentas bancarias disponibles
-export const CUENTAS = [
-  'Nubank Daniel',
-  'Bancoppel Daniel',
-  'Efectivo',
-  'Nu credito Diana',
-  'Bancoppel Diana',
-] as const
+// Cuentas bancarias - ahora dinámicas desde la BD
+// El array vacío es solo para compatibilidad, las cuentas reales vienen de la BD
+export const CUENTAS: string[] = []
 
-export type Cuenta = (typeof CUENTAS)[number]
+export type Cuenta = string
 
 // Tipos de transacciones
 export type TipoTransaccion = 'ingreso' | 'gasto' | 'transferencia'
@@ -104,16 +99,26 @@ export interface FiltroFechas {
 }
 
 // Cuenta desde BD (con balance inicial)
-export type TipoCuenta = 'debito' | 'credito' | 'efectivo'
+export type TipoCuenta = 'debito' | 'credito' | 'efectivo' | 'ahorro' | 'inversion'
 
 export interface CuentaDB {
   id: string
-  nombre: Cuenta
+  user_id?: string
+  nombre: string
   tipo: TipoCuenta
   balance_inicial: number
-  fecha_corte: string
+  fecha_corte?: string | null
   color: string | null
+  icono?: string | null
   activa: boolean
   created_at?: string
   updated_at?: string
+}
+
+export interface CuentaInput {
+  nombre: string
+  tipo: TipoCuenta
+  balance_inicial?: number
+  color?: string
+  icono?: string
 }

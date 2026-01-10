@@ -5,6 +5,7 @@ import { Trash2, Pencil, TrendingUp, TrendingDown, ArrowRightLeft, ChevronLeft, 
 import { Transaction, TipoTransaccion } from '../types'
 import { formatCurrency, formatDateFull } from '../services/analytics'
 import { getCategoryColor } from '@/lib/categoryColors'
+import { useLanguage } from '@/shared/i18n'
 
 interface TransactionsTableProps {
   transactions: Transaction[]
@@ -26,6 +27,7 @@ export function TransactionsTable({
   onEdit,
   isLoading = false,
 }: TransactionsTableProps) {
+  const { t } = useLanguage()
   const [filter, setFilter] = useState<FilterType>('todos')
   const [sortField, setSortField] = useState<SortField>('fecha_hora')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -106,72 +108,80 @@ export function TransactionsTable({
     <div className="bg-neu-bg shadow-neu rounded-2xl p-6">
       {/* Header con filtros */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h3 className="text-lg font-semibold text-gray-700">Transacciones</h3>
+        <h3 className="text-lg font-semibold text-gray-700">{t.dashboard.transactions}</h3>
         <div className="flex gap-2 flex-wrap">
-          {(['todos', 'ingreso', 'gasto', 'transferencia'] as FilterType[]).map((f) => (
-            <button
-              key={f}
-              onClick={() => handleFilterChange(f)}
-              className={`
-                px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
-                ${
-                  filter === f
-                    ? 'bg-neu-bg shadow-neu-inset text-blue-600'
-                    : 'bg-neu-bg shadow-neu text-gray-600 hover:shadow-neu-sm'
-                }
-              `}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
+          {(['todos', 'ingreso', 'gasto', 'transferencia'] as FilterType[]).map((f) => {
+            const labels: Record<FilterType, string> = {
+              todos: t.dashboard.all,
+              ingreso: t.dashboard.income,
+              gasto: t.dashboard.expense,
+              transferencia: t.dashboard.transfer,
+            }
+            return (
+              <button
+                key={f}
+                onClick={() => handleFilterChange(f)}
+                className={`
+                  px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200
+                  ${
+                    filter === f
+                      ? 'bg-neu-bg shadow-neu-inset text-blue-600'
+                      : 'bg-neu-bg shadow-neu text-gray-600 hover:shadow-neu-sm'
+                  }
+                `}
+              >
+                {labels[f]}
+              </button>
+            )
+          })}
         </div>
       </div>
 
       {/* Tabla */}
       {isLoading ? (
         <div className="h-64 flex items-center justify-center text-gray-400">
-          Cargando...
+          {t.dashboard.loading}
         </div>
       ) : paginatedData.length === 0 ? (
         <div className="h-64 flex items-center justify-center text-gray-400">
-          No hay transacciones
+          {t.dashboard.noTransactions}
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="text-left text-sm text-gray-500 border-b border-gray-200">
-                <th className="pb-3 font-medium">Tipo</th>
+                <th className="pb-3 font-medium">{t.dashboard.type}</th>
                 <th
                   className="pb-3 font-medium cursor-pointer hover:text-gray-700"
                   onClick={() => handleSort('fecha_hora')}
                 >
-                  Fecha
+                  {t.dashboard.date}
                   <SortIndicator field="fecha_hora" />
                 </th>
                 <th
                   className="pb-3 font-medium cursor-pointer hover:text-gray-700"
                   onClick={() => handleSort('categoria')}
                 >
-                  Categoria
+                  {t.dashboard.category}
                   <SortIndicator field="categoria" />
                 </th>
-                <th className="pb-3 font-medium">Cuenta</th>
-                <th className="pb-3 font-medium">Descripcion</th>
+                <th className="pb-3 font-medium">{t.dashboard.account}</th>
+                <th className="pb-3 font-medium">{t.dashboard.description}</th>
                 <th
                   className="pb-3 font-medium text-right cursor-pointer hover:text-gray-700"
                   onClick={() => handleSort('monto')}
                 >
-                  Monto
+                  {t.dashboard.amount}
                   <SortIndicator field="monto" />
                 </th>
-                <th className="pb-3 font-medium text-center">Acciones</th>
+                <th className="pb-3 font-medium text-center">{t.dashboard.actions}</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedData.map((t) => (
+              {paginatedData.map((tx) => (
                 <tr
-                  key={t.id}
+                  key={tx.id}
                   className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors"
                 >
                   <td className="py-4">
@@ -179,78 +189,78 @@ export function TransactionsTable({
                       className={`
                         inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium
                         ${
-                          t.tipo === 'ingreso'
+                          tx.tipo === 'ingreso'
                             ? 'bg-emerald-100 text-emerald-700'
-                            : t.tipo === 'gasto'
+                            : tx.tipo === 'gasto'
                             ? 'bg-red-100 text-red-700'
                             : 'bg-sky-100 text-sky-700'
                         }
                       `}
                     >
-                      {t.tipo === 'ingreso' ? (
+                      {tx.tipo === 'ingreso' ? (
                         <TrendingUp className="w-3 h-3" />
-                      ) : t.tipo === 'gasto' ? (
+                      ) : tx.tipo === 'gasto' ? (
                         <TrendingDown className="w-3 h-3" />
                       ) : (
                         <ArrowRightLeft className="w-3 h-3" />
                       )}
-                      {t.tipo}
+                      {tx.tipo}
                     </div>
                   </td>
                   <td className="py-4 text-sm text-gray-600">
-                    {formatDateFull(t.fecha_hora)}
+                    {formatDateFull(tx.fecha_hora)}
                   </td>
                   <td className="py-4">
                     <span
                       className="px-2 py-1 rounded text-xs text-white font-medium"
-                      style={{ backgroundColor: getCategoryColor(t.categoria) }}
+                      style={{ backgroundColor: getCategoryColor(tx.categoria) }}
                     >
-                      {t.categoria}
+                      {tx.categoria}
                     </span>
                   </td>
                   <td className="py-4 text-sm text-gray-600">
-                    {t.tipo === 'transferencia' && t.cuenta_destino
-                      ? `${t.cuenta} → ${t.cuenta_destino}`
-                      : t.cuenta || '-'}
+                    {tx.tipo === 'transferencia' && tx.cuenta_destino
+                      ? `${tx.cuenta} → ${tx.cuenta_destino}`
+                      : tx.cuenta || '-'}
                   </td>
                   <td className="py-4 text-sm text-gray-500 max-w-xs truncate">
-                    {t.descripcion || '-'}
+                    {tx.descripcion || '-'}
                   </td>
                   <td
                     className={`
                       py-4 text-sm font-semibold text-right
                       ${
-                        t.tipo === 'ingreso'
+                        tx.tipo === 'ingreso'
                           ? 'text-emerald-600'
-                          : t.tipo === 'gasto'
+                          : tx.tipo === 'gasto'
                           ? 'text-red-600'
                           : 'text-sky-600'
                       }
                     `}
                   >
-                    {t.tipo === 'ingreso' ? '+' : t.tipo === 'gasto' ? '-' : '↔'}
-                    {formatCurrency(Number(t.monto))}
+                    {tx.tipo === 'ingreso' ? '+' : tx.tipo === 'gasto' ? '-' : '↔'}
+                    {formatCurrency(Number(tx.monto))}
                   </td>
                   <td className="py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
-                        onClick={() => onEdit(t)}
+                        onClick={() => onEdit(tx)}
                         className="p-2 rounded-lg transition-all duration-200 bg-neu-bg shadow-neu hover:shadow-neu-inset text-gray-500 hover:text-blue-500"
-                        title="Editar"
+                        title={t.dashboard.editAction}
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(t.id)}
+                        onClick={() => handleDelete(tx.id)}
                         className={`
                           p-2 rounded-lg transition-all duration-200
                           ${
-                            confirmDelete === t.id
+                            confirmDelete === tx.id
                               ? 'bg-red-500 text-white shadow-lg'
                               : 'bg-neu-bg shadow-neu hover:shadow-neu-inset text-gray-500 hover:text-red-500'
                           }
                         `}
-                        title={confirmDelete === t.id ? 'Click para confirmar' : 'Eliminar'}
+                        title={confirmDelete === tx.id ? t.dashboard.confirmDelete : t.dashboard.deleteAction}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -269,7 +279,7 @@ export function TransactionsTable({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           {/* Selector de tamaño de página */}
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <span>Mostrar:</span>
+            <span>{t.dashboard.show}:</span>
             <div className="flex gap-1">
               {PAGE_SIZE_OPTIONS.map((size) => (
                 <button
@@ -308,7 +318,7 @@ export function TransactionsTable({
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="text-sm text-gray-600 min-w-[100px] text-center">
-                Página {currentPage} de {totalPages}
+                {t.dashboard.page} {currentPage} {t.dashboard.of} {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
@@ -330,18 +340,18 @@ export function TransactionsTable({
 
         {/* Resumen */}
         <div className="flex justify-between items-center text-sm text-gray-500">
-          <span>{sorted.length} transacciones en total</span>
+          <span>{sorted.length} {t.dashboard.totalTransactions}</span>
           <span className="font-medium">
-            Balance filtrado:{' '}
+            {t.dashboard.filteredBalance}:{' '}
             <span
               className={
                 sorted.reduce(
-                  (sum, t) =>
+                  (sum, item) =>
                     sum +
-                    (t.tipo === 'ingreso'
-                      ? Number(t.monto)
-                      : t.tipo === 'gasto'
-                      ? -Number(t.monto)
+                    (item.tipo === 'ingreso'
+                      ? Number(item.monto)
+                      : item.tipo === 'gasto'
+                      ? -Number(item.monto)
                       : 0), // Transferencias no afectan el balance filtrado
                   0
                 ) >= 0
@@ -351,12 +361,12 @@ export function TransactionsTable({
             >
               {formatCurrency(
                 sorted.reduce(
-                  (sum, t) =>
+                  (sum, item) =>
                     sum +
-                    (t.tipo === 'ingreso'
-                      ? Number(t.monto)
-                      : t.tipo === 'gasto'
-                      ? -Number(t.monto)
+                    (item.tipo === 'ingreso'
+                      ? Number(item.monto)
+                      : item.tipo === 'gasto'
+                      ? -Number(item.monto)
                       : 0),
                   0
                 )

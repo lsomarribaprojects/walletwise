@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic'
 import { useMemo } from 'react'
 import { getCategoryColor } from '@/lib/categoryColors'
 import { CategorySummary } from '../services/analytics'
+import { useLanguage } from '@/shared/i18n'
 
 const Bar = dynamic(
   () => import('react-chartjs-2').then((mod) => mod.Bar),
@@ -30,6 +31,7 @@ interface CategoryDistributionProps {
 }
 
 export function CategoryDistribution({ data, title, type }: CategoryDistributionProps) {
+  const { t } = useLanguage()
   const totalAmount = useMemo(
     () => data.reduce((sum, d) => sum + d.total, 0),
     [data]
@@ -94,7 +96,7 @@ export function CategoryDistribution({ data, title, type }: CategoryDistribution
           {type === 'gasto' ? '💸' : '💰'} {title}
         </h3>
         <p className="text-center py-8 text-gray-400">
-          No hay {type === 'gasto' ? 'gastos' : 'ingresos'} en este período
+          {t.dashboard.noDataPeriod}
         </p>
       </div>
     )

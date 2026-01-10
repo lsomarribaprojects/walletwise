@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, TrendingUp, TrendingDown, ArrowRightLeft, Check, Loader2 } from 'lucide-react'
+import { X, TrendingUp, TrendingDown, ArrowRightLeft, Check, Loader2, Camera } from 'lucide-react'
 import { NeuButton } from '@/shared/components/ui/NeuButton'
 import { NeuInput } from '@/shared/components/ui/NeuInput'
 import { NeuSelect } from '@/shared/components/ui/NeuSelect'
@@ -10,10 +10,10 @@ import {
   TransactionInput,
   EXPENSE_CATEGORIES,
   INCOME_CATEGORIES,
-  CUENTAS,
-  Cuenta,
+  CuentaDB,
 } from '../types'
 import { TRANSFER_CATEGORY } from '@/lib/categoryColors'
+import { ReceiptScanner, ExtractedReceiptData } from './ReceiptScanner'
 
 interface AddTransactionModalProps {
   isOpen: boolean
@@ -21,13 +21,14 @@ interface AddTransactionModalProps {
   onSubmit: (data: TransactionInput) => Promise<void>
   onUpdate?: (id: string, data: Partial<TransactionInput>) => Promise<void>
   initialTipo?: TipoTransaccion
+  cuentas?: CuentaDB[]
   editTransaction?: {
     id: string
     tipo: TipoTransaccion
     monto: number
     categoria: string
-    cuenta: Cuenta
-    cuenta_destino?: Cuenta | null
+    cuenta: string
+    cuenta_destino?: string | null
     descripcion?: string | null
   } | null
 }
@@ -38,18 +39,23 @@ export function AddTransactionModal({
   onSubmit,
   onUpdate,
   initialTipo,
+  cuentas = [],
   editTransaction,
 }: AddTransactionModalProps) {
   const isEditMode = !!editTransaction
+  const cuentasList = cuentas.map(c => c.nombre)
+  const defaultCuenta = cuentasList[0] || ''
+
   const [tipo, setTipo] = useState<TipoTransaccion>(initialTipo || 'gasto')
   const [monto, setMonto] = useState('')
   const [categoria, setCategoria] = useState('')
-  const [cuenta, setCuenta] = useState<Cuenta>('Nubank Daniel')
-  const [cuentaDestino, setCuentaDestino] = useState<Cuenta>('Efectivo')
+  const [cuenta, setCuenta] = useState<string>(defaultCuenta)
+  const [cuentaDestino, setCuentaDestino] = useState<string>(cuentasList[1] || defaultCuenta)
   const [descripcion, setDescripcion] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showScanner, setShowScanner] = useState(false)
 
   // Populate form when editing or sync tipo when initialTipo changes
   useEffect(() => {
@@ -58,18 +64,28 @@ export function AddTransactionModal({
       setMonto(String(editTransaction.monto))
       setCategoria(editTransaction.categoria)
       setCuenta(editTransaction.cuenta)
-      setCuentaDestino(editTransaction.cuenta_destino || 'Efectivo')
+      setCuentaDestino(editTransaction.cuenta_destino || cuentasList[1] || '')
       setDescripcion(editTransaction.descripcion || '')
     } else if (initialTipo && isOpen) {
       setTipo(initialTipo)
     }
-  }, [editTransaction, initialTipo, isOpen])
+  }, [editTransaction, initialTipo, isOpen, cuentasList])
+
+  // Update default cuenta when cuentas change
+  useEffect(() => {
+    if (cuentasList.length > 0 && !cuenta) {
+      setCuenta(cuentasList[0])
+      if (cuentasList.length > 1) {
+        setCuentaDestino(cuentasList[1])
+      }
+    }
+  }, [cuentasList, cuenta])
 
   // Categorías según tipo (transferencias usan categoría fija)
   const categories = tipo === 'gasto' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
 
   // Cuentas disponibles para destino (excluir la cuenta origen)
-  const cuentasDestino = CUENTAS.filter((c) => c !== cuenta)
+  const cuentasDestinoList = cuentasList.filter((c) => c !== cuenta)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -128,8 +144,8 @@ export function AddTransactionModal({
     setTipo('gasto')
     setMonto('')
     setCategoria('')
-    setCuenta('Nubank Daniel')
-    setCuentaDestino('Efectivo')
+    setCuenta(defaultCuenta)
+    setCuentaDestino(cuentasList[1] || defaultCuenta)
     setDescripcion('')
     setError(null)
   }
@@ -137,6 +153,48 @@ export function AddTransactionModal({
   const handleClose = () => {
     resetForm()
     onClose()
+  }
+
+  // Handle data extracted from receipt scanner
+  const handleReceiptData = (data: ExtractedReceiptData) => {
+    // Set tipo to 'gasto' since receipts are expenses
+    setTipo('gasto')
+
+    // Fill in the extracted data
+    if (data.monto) {
+      setMonto(String(data.monto))
+    }
+
+    if (data.categoria) {
+      // Cast to check if categoria is valid
+      const validCategories: readonly string[] = EXPENSE_CATEGORIES
+      if (validCategories.includes(data.categoria)) {
+        setCategoria(data.categoria)
+      }
+    }
+
+    // Build description from extracted info
+    const descParts: string[] = []
+    if (data.comercio) descParts.push(data.comercio)
+    if (data.descripcion && data.descripcion !== data.comercio) {
+      descParts.push(data.descripcion)
+    }
+    if (descParts.length > 0) {
+      setDescripcion(descParts.join(' - '))
+    }
+
+    // Try to match payment method to user's accounts
+    if (data.metodoPago) {
+      const matchedAccount = cuentasList.find(c =>
+        c.toLowerCase().includes(data.metodoPago!.toLowerCase()) ||
+        data.metodoPago!.toLowerCase().includes(c.toLowerCase())
+      )
+      if (matchedAccount) {
+        setCuenta(matchedAccount)
+      }
+    }
+
+    setShowScanner(false)
   }
 
   if (!isOpen) return null
@@ -156,12 +214,23 @@ export function AddTransactionModal({
           <h2 className="text-xl font-bold text-gray-800">
             {isEditMode ? 'Editar Transaccion' : 'Nueva Transaccion'}
           </h2>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-xl bg-neu-bg shadow-neu hover:shadow-neu-inset transition-shadow"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            {!isEditMode && (
+              <button
+                onClick={() => setShowScanner(true)}
+                className="p-2 rounded-xl bg-purple-100 hover:bg-purple-200 transition-colors"
+                title="Escanear recibo"
+              >
+                <Camera className="w-5 h-5 text-purple-600" />
+              </button>
+            )}
+            <button
+              onClick={handleClose}
+              className="p-2 rounded-xl bg-neu-bg shadow-neu hover:shadow-neu-inset transition-shadow"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
         </div>
 
         {/* Success state */}
@@ -245,15 +314,18 @@ export function AddTransactionModal({
               label={tipo === 'transferencia' ? 'Cuenta Origen' : 'Cuenta'}
               value={cuenta}
               onChange={(e) => {
-                const newCuenta = e.target.value as Cuenta
+                const newCuenta = e.target.value
                 setCuenta(newCuenta)
                 // Si la cuenta destino es igual, cambiarla
                 if (newCuenta === cuentaDestino) {
-                  const available = CUENTAS.filter((c) => c !== newCuenta)
+                  const available = cuentasList.filter((c) => c !== newCuenta)
                   if (available.length > 0) setCuentaDestino(available[0])
                 }
               }}
-              options={CUENTAS.map((c) => ({ value: c, label: c }))}
+              options={cuentasList.length > 0
+                ? cuentasList.map((c) => ({ value: c, label: c }))
+                : [{ value: '', label: 'Crea una cuenta primero' }]
+              }
               required
             />
 
@@ -262,8 +334,8 @@ export function AddTransactionModal({
               <NeuSelect
                 label="Cuenta Destino"
                 value={cuentaDestino}
-                onChange={(e) => setCuentaDestino(e.target.value as Cuenta)}
-                options={cuentasDestino.map((c) => ({ value: c, label: c }))}
+                onChange={(e) => setCuentaDestino(e.target.value)}
+                options={cuentasDestinoList.map((c) => ({ value: c, label: c }))}
                 required
               />
             )}
@@ -312,6 +384,15 @@ export function AddTransactionModal({
           </form>
         )}
       </div>
+
+      {/* Receipt Scanner Modal */}
+      {showScanner && (
+        <ReceiptScanner
+          onDataExtracted={handleReceiptData}
+          onClose={() => setShowScanner(false)}
+          cuentas={cuentasList}
+        />
+      )}
     </div>
   )
 }
