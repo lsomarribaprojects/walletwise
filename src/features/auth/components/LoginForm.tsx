@@ -80,7 +80,8 @@ export function LoginForm() {
 
           <NeuButton
             type="submit"
-            className="w-full bg-purple-600 hover:bg-purple-700"
+            variant="solid"
+            className="w-full"
             size="lg"
             isLoading={loading}
           >
@@ -105,7 +106,12 @@ export function LoginForm() {
       </NeuCard>
 
       <div className="text-center mt-6 space-y-2">
-        <div className="flex items-center justify-center gap-2">
+        <Link
+          href="https://www.sinsajocreators.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 hover:opacity-80 transition-opacity"
+        >
           <span className="text-xs text-gray-400">Desarrollado por</span>
           <Image
             src="/sinsajo-logo.png"
@@ -114,8 +120,8 @@ export function LoginForm() {
             height={20}
             className="inline-block"
           />
-          <span className="text-xs font-medium text-purple-600">Sinsajo Creators</span>
-        </div>
+          <span className="text-xs font-medium text-purple-600 hover:text-purple-700">Sinsajo Creators</span>
+        </Link>
         <p className="text-xs text-gray-400">
           &copy; 2026 Sinsajo Creators. Todos los derechos reservados.
         </p>

@@ -4,7 +4,7 @@ import { ButtonHTMLAttributes, ReactNode } from 'react'
 
 interface NeuButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
-  variant?: 'primary' | 'secondary' | 'icon'
+  variant?: 'primary' | 'secondary' | 'icon' | 'solid'
   size?: 'sm' | 'md' | 'lg'
   isLoading?: boolean
 }
@@ -25,21 +25,18 @@ export function NeuButton({
   }
 
   const variantClasses = {
-    primary: 'text-purple-600 font-semibold',
-    secondary: 'text-gray-600 font-medium',
-    icon: 'w-12 h-12 flex items-center justify-center rounded-full',
+    primary: 'bg-neu-bg shadow-neu hover:shadow-neu-inset active:shadow-neu-inset text-purple-600 font-semibold',
+    secondary: 'bg-neu-bg shadow-neu hover:shadow-neu-inset active:shadow-neu-inset text-gray-600 font-medium',
+    icon: 'bg-neu-bg shadow-neu hover:shadow-neu-inset active:shadow-neu-inset w-12 h-12 flex items-center justify-center rounded-full',
+    solid: 'bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-semibold shadow-lg hover:shadow-xl',
   }
 
   return (
     <button
       className={`
-        bg-neu-bg
-        shadow-neu
-        hover:shadow-neu-inset
-        active:shadow-neu-inset
-        transition-shadow duration-200
+        transition-all duration-200
         disabled:opacity-50 disabled:cursor-not-allowed
-        focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2 focus:ring-offset-neu-bg
+        focus:outline-none focus:ring-2 focus:ring-purple-400 focus:ring-offset-2
         ${sizeClasses[size]}
         ${variantClasses[variant]}
         ${className}

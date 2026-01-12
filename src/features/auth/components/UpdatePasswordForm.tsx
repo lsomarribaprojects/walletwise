@@ -48,6 +48,7 @@ export function UpdatePasswordForm() {
 
         <NeuButton
           type="submit"
+          variant="solid"
           className="w-full"
           size="lg"
           isLoading={loading}
