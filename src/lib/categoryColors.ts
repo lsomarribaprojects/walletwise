@@ -34,7 +34,7 @@ export type TransferCategory = typeof TRANSFER_CATEGORY
 
 // ===== COLORES POR CATEGORÍA =====
 export const CATEGORY_COLORS: Record<string, string> = {
-  // Gastos
+  // Gastos (español)
   Nomina: '#6366F1',           // Índigo
   Equipo: '#0EA5E9',           // Sky
   Renta: '#EF4444',            // Rojo
@@ -45,6 +45,16 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Entretenimiento: '#EC4899',  // Pink
   Otros: '#94A3B8',            // Gris
 
+  // Gastos (inglés - para compatibilidad con DB)
+  rent: '#EF4444',             // Rojo
+  food: '#22C55E',             // Verde
+  transport: '#14B8A6',        // Teal
+  entertainment: '#EC4899',    // Pink
+  services: '#0EA5E9',         // Sky
+  software: '#8B5CF6',         // Morado
+  other: '#94A3B8',            // Gris
+  payroll: '#6366F1',          // Índigo
+
   // Ingresos
   'AlquimIA': '#F97316',           // Naranja
   'SaaS Factory LT': '#8B5CF6',    // Morado
@@ -53,6 +63,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
 
   // Transferencias (azul medio entre rojo y verde)
   'Transferencia': '#0EA5E9',      // Sky blue
+  'transferencia': '#0EA5E9',      // Sky blue
 }
 
 export const DEFAULT_CATEGORY_COLOR = '#6B7280'
