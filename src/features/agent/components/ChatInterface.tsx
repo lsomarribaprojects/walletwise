@@ -1,8 +1,7 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
-import { useRef, useEffect, useState, useMemo, FormEvent } from 'react'
+import { useRef, useEffect, useState, FormEvent } from 'react'
 import { NeuCard } from '@/shared/components/ui'
 import { MessageBubble } from './MessageBubble'
 import { ChatInput } from './ChatInput'
@@ -54,22 +53,16 @@ He analizado los datos de ${inputs.businessName || 'tu negocio'}. Estoy aquí pa
 
 ¿En qué puedo ayudarte hoy?`
 
-  // AI SDK v5: UIMessage only has parts, not content
-  const welcomeMessage = {
-    id: 'welcome',
-    role: 'assistant' as const,
-    parts: [{ type: 'text' as const, text: welcomeContent }],
-  }
-
-  // AI SDK v5: Use transport instead of api/body
-  const transport = useMemo(() => new DefaultChatTransport({
+  const { messages, append, isLoading, error } = useChat({
     api: '/api/chat',
     body: { context },
-  }), [context])
-
-  const { messages, sendMessage, status, error } = useChat({
-    transport,
-    messages: [welcomeMessage],
+    initialMessages: [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: welcomeContent,
+      },
+    ],
     onError: (err) => {
       console.error('❌ Chat error:', err)
     },
@@ -78,11 +71,8 @@ He analizado los datos de ${inputs.businessName || 'tu negocio'}. Estoy aquí pa
   // Debug: log messages and errors
   useEffect(() => {
     console.log('📨 Messages:', messages)
-    console.log('📊 Status:', status)
     if (error) console.error('❌ Error state:', error)
-  }, [messages, status, error])
-
-  const isLoading = status === 'streaming' || status === 'submitted'
+  }, [messages, error])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -95,8 +85,10 @@ He analizado los datos de ${inputs.businessName || 'tu negocio'}. Estoy aquí pa
     const userMessage = input.trim()
     setInput('')
 
-    // AI SDK v5: Use text instead of role/content
-    await sendMessage({ text: userMessage })
+    await append({
+      role: 'user',
+      content: userMessage,
+    })
   }
 
   return (

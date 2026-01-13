@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/client'
 import { CuentaDB, CuentaInput } from '../types'
 
-export async function getCuentas(): Promise<CuentaDB[]> {
-  const supabase = createClient()
+// Singleton del cliente para mantener la sesión consistente
+const supabase = createClient()
 
+export async function getCuentas(): Promise<CuentaDB[]> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return []
 
@@ -23,10 +24,8 @@ export async function getCuentas(): Promise<CuentaDB[]> {
 }
 
 export async function createCuenta(cuenta: CuentaInput): Promise<CuentaDB | null> {
-  const supabase = createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No autenticado')
+  if (!user) throw new Error('Sesión expirada. Por favor recarga la página.')
 
   const { data, error } = await supabase
     .from('cuentas')
@@ -50,8 +49,6 @@ export async function createCuenta(cuenta: CuentaInput): Promise<CuentaDB | null
 }
 
 export async function updateCuenta(id: string, cuenta: Partial<CuentaInput>): Promise<CuentaDB | null> {
-  const supabase = createClient()
-
   const { data, error } = await supabase
     .from('cuentas')
     .update({
@@ -71,8 +68,6 @@ export async function updateCuenta(id: string, cuenta: Partial<CuentaInput>): Pr
 }
 
 export async function deleteCuenta(id: string): Promise<boolean> {
-  const supabase = createClient()
-
   // Soft delete - solo marcar como inactiva
   const { error } = await supabase
     .from('cuentas')

@@ -1,4 +1,5 @@
-import { openrouter, AGENT_MODELS, DEFAULT_MODEL, type AgentModelKey } from '@/lib/ai/openrouter'
+import { google } from '@/lib/ai/gemini'
+import { AGENT_MODELS, DEFAULT_MODEL, type AgentModelKey } from '@/lib/ai/models'
 import { closeAndParseJson } from '@/lib/ai/closeAndParseJson'
 import { streamText } from 'ai'
 import { createApiClient } from '@/lib/supabase/api'
@@ -109,23 +110,97 @@ async function getRecurringExpenses() {
   }
 }
 
+// Obtener tarjetas de crédito del usuario
+async function getCreditCards() {
+  const supabase = createApiClient()
+  const { data } = await supabase
+    .from('credit_cards')
+    .select('*')
+    .eq('activa', true)
+    .order('saldo_actual', { ascending: false })
+
+  if (!data || data.length === 0) {
+    return null
+  }
+
+  // Calcular métricas
+  const deudaTotal = data.reduce((s, c) => s + Number(c.saldo_actual), 0)
+  const limiteTotal = data.reduce((s, c) => s + Number(c.limite_credito), 0)
+  const utilizacion = limiteTotal > 0 ? (deudaTotal / limiteTotal) * 100 : 0
+
+  // Tasa promedio ponderada
+  const tasaPonderada = deudaTotal > 0
+    ? data.reduce((s, c) => s + (Number(c.tasa_interes_anual) * Number(c.saldo_actual)), 0) / deudaTotal
+    : 0
+
+  // Intereses mensuales proyectados
+  const interesesMensuales = data.reduce((s, c) => {
+    const tasaMensual = Number(c.tasa_interes_anual) / 12 / 100
+    return s + (Number(c.saldo_actual) * tasaMensual)
+  }, 0)
+
+  // Pago mínimo total
+  const pagoMinimoTotal = data.reduce((s, c) =>
+    s + (Number(c.pago_minimo) || Number(c.saldo_actual) * 0.03), 0)
+
+  return {
+    tarjetas: data.map(c => ({
+      nombre: c.nombre,
+      banco: c.banco,
+      saldo: c.saldo_actual,
+      limite: c.limite_credito,
+      utilizacion: Math.round((Number(c.saldo_actual) / Number(c.limite_credito)) * 100),
+      apr: c.tasa_interes_anual,
+      pagoMinimo: c.pago_minimo || Math.round(Number(c.saldo_actual) * 0.03),
+      fechaPago: c.fecha_pago
+    })),
+    metricas: {
+      deudaTotal,
+      limiteTotal,
+      utilizacion: Math.round(utilizacion * 10) / 10,
+      tasaPromedio: Math.round(tasaPonderada * 10) / 10,
+      interesesMensuales: Math.round(interesesMensuales),
+      pagoMinimoTotal: Math.round(pagoMinimoTotal)
+    }
+  }
+}
+
 // Detectar qué datos necesita la pregunta
-function detectDataNeeds(prompt: string): { needsFinances: boolean; needsRecurring: boolean; periodo: string; tipo: string; categoria: boolean } {
+function detectDataNeeds(prompt: string): {
+  needsFinances: boolean
+  needsRecurring: boolean
+  needsCreditCards: boolean
+  periodo: string
+  tipo: string
+  categoria: boolean
+} {
   const lower = prompt.toLowerCase()
   return {
     needsFinances: /gast|ingres|balance|cuanto|dinero|transacci|mes|quincena|semana/.test(lower),
     needsRecurring: /fijo|recurrent|suscripci|mensual/.test(lower),
+    needsCreditCards: /tarjeta|credito|deuda|interes|apr|pago minimo|avalancha|bola de nieve|liquidar|score/.test(lower),
     periodo: lower.includes('quincena') ? 'quincena' : lower.includes('anterior') ? 'mes_anterior' : 'mes_actual',
     tipo: lower.includes('gasto') ? 'gasto' : lower.includes('ingreso') ? 'ingreso' : 'todos',
     categoria: /categor|en que|donde|mayor/.test(lower)
   }
 }
 
-const DEFAULT_SYSTEM_PROMPT = `Eres un CFO virtual con acceso a datos financieros reales.
+const DEFAULT_SYSTEM_PROMPT = `Eres un CFO virtual experto con acceso a datos financieros reales del usuario.
 
 MEMORIA: Tienes acceso al historial de la conversacion. Recuerda nombres, preferencias y contexto previo.
 
-FORMATO DE RESPUESTA (OBLIGATORIO):
+CAPACIDADES DE ASESORIA DE DEUDA:
+1. Conoces todas las tarjetas de credito del usuario con sus tasas APR y saldos
+2. Puedes calcular planes de pago con dos estrategias:
+   - AVALANCHA: Pagar primero la de mayor tasa (ahorra mas en intereses, matematicamente optimo)
+   - BOLA DE NIEVE: Pagar primero la de menor saldo (victorias rapidas, psicologicamente motivador)
+3. Cuando el usuario mencione dinero disponible para pagar deuda, calcula como distribuirlo
+4. Siempre muestra el ahorro en intereses comparado con solo pagar minimos
+5. Alerta sobre tarjetas con alta utilizacion (>70%) que afectan score crediticio
+6. Calcula intereses mensuales: saldo * (APR / 12 / 100)
+7. Si el usuario quiere liquidar deuda, calcula meses y total de intereses
+
+FORMATO DE RESPUESTA (OBLIGATORIO - responde SOLO con este JSON):
 {
   "actions": [
     { "_type": "think", "text": "razonamiento breve" },
@@ -133,16 +208,19 @@ FORMATO DE RESPUESTA (OBLIGATORIO):
     { "_type": "calculate", "label": "descripcion", "formula": "formula", "result": 123, "unit": "MXN" },
     { "_type": "recommend", "priority": "high|medium|low", "title": "titulo", "description": "1-2 lineas", "impact": "cuantificado" },
     { "_type": "alert", "severity": "info|warning|critical", "message": "mensaje corto" },
-    { "_type": "message", "text": "respuesta directa" }
+    { "_type": "message", "text": "respuesta directa al usuario" }
   ]
 }
 
 REGLAS:
-1. Tienes acceso a datos REALES - úsalos para responder con precisión
-2. SE CONCISO - Maximo 3-4 acciones por respuesta
-3. Responde lo que preguntan, no agregues info innecesaria
-4. 1 insight valioso > 10 obviedades
-5. Sin emojis. Sin relleno.`
+1. SIEMPRE responde con JSON valido en el formato de arriba
+2. Tienes acceso a datos REALES - usalos para responder con precision
+3. SE CONCISO - Maximo 3-4 acciones por respuesta
+4. Responde lo que preguntan, no agregues info innecesaria
+5. 1 insight valioso > 10 obviedades
+6. Sin emojis. Sin relleno.
+7. Si analizas una imagen de recibo, extrae: monto total, comercio, fecha, y items si son visibles
+8. Para asesoria de deuda, siempre incluye el ahorro vs solo pagar minimos`
 
 // Tipo para mensajes del historial
 interface HistoryMessage {
@@ -152,20 +230,17 @@ interface HistoryMessage {
 
 export async function POST(req: Request) {
   try {
-    const { prompt, context, model: modelKey, webSearch = false, images = [], history = [] } = await req.json() as {
+    const { prompt, context, model: modelKey, images = [], history = [] } = await req.json() as {
       prompt: string
       context?: string
       model?: string
-      webSearch?: boolean
       images?: string[]
       history?: HistoryMessage[]
     }
 
-    const hasImages = images.length > 0
-    let selectedModel = AGENT_MODELS[modelKey as AgentModelKey] || AGENT_MODELS[DEFAULT_MODEL]
-    if (hasImages) selectedModel = AGENT_MODELS['gemini-3-flash']
-
-    const modelId = webSearch && !hasImages ? `${selectedModel.id}:online` : selectedModel.id
+    // Seleccionar modelo (siempre usar Google SDK ahora)
+    const selectedModel = AGENT_MODELS[modelKey as AgentModelKey] || AGENT_MODELS[DEFAULT_MODEL]
+    const modelId = selectedModel.id
 
     const encoder = new TextEncoder()
     const stream = new TransformStream()
@@ -173,6 +248,7 @@ export async function POST(req: Request) {
 
     // Detectar qué datos necesita
     const needs = detectDataNeeds(prompt)
+    const hasImages = images.length > 0
 
     // Ejecutar todo en un async IIFE para no bloquear el Response
     ;(async () => {
@@ -200,12 +276,27 @@ export async function POST(req: Request) {
           dataContext += `\n\nGASTOS RECURRENTES:\n${JSON.stringify(data, null, 2)}`
         }
 
+        if (needs.needsCreditCards) {
+          const data = await getCreditCards()
+          if (data) {
+            await writer.write(encoder.encode(`data: ${JSON.stringify({ _type: 'tool_result', tool: 'getCreditCards', data, complete: true })}\n\n`))
+            dataContext += `\n\nTARJETAS DE CREDITO:\n${JSON.stringify(data, null, 2)}`
+          }
+        }
+
         const contextMessage = context ? `\n\nCONTEXTO:\n${context}` : ''
         const systemPrompt = baseSystemPrompt + contextMessage + dataContext +
-          (hasImages ? `\n\nANALISIS DE IMAGEN: Extrae datos numericos visibles.` : '')
+          (hasImages ? `\n\nANALISIS DE IMAGEN: Analiza el recibo/imagen y extrae todos los datos relevantes (monto, comercio, fecha, items).` : '')
 
+        // Construir contenido del mensaje con imágenes si las hay
         const userContent = hasImages
-          ? [...images.map((b: string) => ({ type: 'image' as const, image: b })), { type: 'text' as const, text: prompt }]
+          ? [
+              ...images.map((b: string) => ({
+                type: 'image' as const,
+                image: b.startsWith('data:') ? b : `data:image/jpeg;base64,${b}`
+              })),
+              { type: 'text' as const, text: prompt }
+            ]
           : prompt
 
         // Construir mensajes con historial previo
@@ -214,8 +305,9 @@ export async function POST(req: Request) {
           content: m.content
         }))
 
+        // Usar Google Gemini directamente
         const { textStream } = streamText({
-          model: openrouter(modelId),
+          model: google(modelId),
           system: systemPrompt,
           messages: [
             ...previousMessages,

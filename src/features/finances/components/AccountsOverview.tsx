@@ -1,6 +1,7 @@
 'use client'
 
-import { CreditCard, Banknote, PiggyBank, TrendingUp, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { CreditCard, Banknote, PiggyBank, TrendingUp, Plus, Edit2, Trash2 } from 'lucide-react'
 import { Transaction, CuentaDB } from '../types'
 import {
   calculateBalancesByCuenta,
@@ -13,6 +14,8 @@ interface AccountsOverviewProps {
   transactions: Transaction[]
   cuentas: CuentaDB[]
   onAddAccount?: () => void
+  onEditAccount?: (cuenta: CuentaDB) => void
+  onDeleteAccount?: (id: string) => Promise<void>
 }
 
 const colorClasses: Record<string, { bg: string; icon: string; border: string }> = {
@@ -61,9 +64,27 @@ function getAccountIcon(tipo: string) {
   }
 }
 
-export function AccountsOverview({ transactions, cuentas, onAddAccount }: AccountsOverviewProps) {
+export function AccountsOverview({ transactions, cuentas, onAddAccount, onEditAccount, onDeleteAccount }: AccountsOverviewProps) {
   const balances = calculateBalancesByCuenta(transactions, cuentas)
   const { t } = useLanguage()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Crear un mapa de cuentas por nombre para acceso rápido
+  const cuentasMap = new Map(cuentas.map(c => [c.nombre, c]))
+
+  const handleDelete = async (id: string, nombre: string) => {
+    if (!onDeleteAccount) return
+
+    if (deletingId === id) {
+      // Segundo click - confirmar eliminación
+      await onDeleteAccount(id)
+      setDeletingId(null)
+    } else {
+      // Primer click - mostrar confirmación
+      setDeletingId(id)
+      setTimeout(() => setDeletingId(null), 3000)
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -95,17 +116,47 @@ export function AccountsOverview({ transactions, cuentas, onAddAccount }: Accoun
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {balances.map((item: CuentaBalance) => {
             const colors = colorClasses[item.color] || colorClasses.gray
             const Icon = getAccountIcon(item.tipo)
             const isNegative = item.balance < 0
+            const cuenta = cuentasMap.get(item.cuenta)
+            const isDeleting = cuenta && deletingId === cuenta.id
 
             return (
               <div
                 key={item.cuenta}
-                className={`bg-neu-bg shadow-neu rounded-xl p-4 transition-all duration-300 hover:shadow-neu-md border ${colors.border}`}
+                className={`bg-neu-bg shadow-neu rounded-xl p-4 transition-all duration-300 hover:shadow-neu-md border ${colors.border} group relative`}
               >
+                {/* Botones de acción - visibles en hover */}
+                {(onEditAccount || onDeleteAccount) && cuenta && (
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {onEditAccount && (
+                      <button
+                        onClick={() => onEditAccount(cuenta)}
+                        className="p-1.5 rounded-lg bg-white/80 hover:bg-white shadow-sm transition-all"
+                        title="Editar"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-gray-500" />
+                      </button>
+                    )}
+                    {onDeleteAccount && (
+                      <button
+                        onClick={() => handleDelete(cuenta.id, cuenta.nombre)}
+                        className={`p-1.5 rounded-lg transition-all ${
+                          isDeleting
+                            ? 'bg-red-500 text-white'
+                            : 'bg-white/80 hover:bg-white shadow-sm'
+                        }`}
+                        title={isDeleting ? 'Click para confirmar' : 'Eliminar'}
+                      >
+                        <Trash2 className={`w-3.5 h-3.5 ${isDeleting ? 'text-white' : 'text-gray-500'}`} />
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 mb-3">
                   <div className={`p-2 rounded-lg ${colors.bg}`}>
                     <Icon className={`w-4 h-4 ${colors.icon}`} />

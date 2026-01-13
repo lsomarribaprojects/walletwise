@@ -1,7 +1,6 @@
 'use client'
 
 import { useChat } from '@ai-sdk/react'
-import { DefaultChatTransport } from 'ai'
 import { useRef, useEffect, useState, useMemo, FormEvent } from 'react'
 import { NeuCard } from '@/shared/components/ui'
 import { MessageBubble } from './MessageBubble'
@@ -50,30 +49,20 @@ Puedo ayudarte a:
 
 ¿En que puedo ayudarte hoy?`
 
-  const welcomeMessage = {
-    id: 'welcome',
-    role: 'assistant' as const,
-    parts: [{ type: 'text' as const, text: welcomeContent }],
-  }
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: '/api/chat',
-        body: { context },
-      }),
-    [context]
-  )
-
-  const { messages, sendMessage, status, error } = useChat({
-    transport,
-    messages: [welcomeMessage],
+  const { messages, append, isLoading, error } = useChat({
+    api: '/api/chat',
+    body: { context },
+    initialMessages: [
+      {
+        id: 'welcome',
+        role: 'assistant',
+        content: welcomeContent,
+      },
+    ],
     onError: (err) => {
       console.error('Chat error:', err)
     },
   })
-
-  const isLoading = status === 'streaming' || status === 'submitted'
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -86,7 +75,10 @@ Puedo ayudarte a:
     const userMessage = input.trim()
     setInput('')
 
-    await sendMessage({ text: userMessage })
+    await append({
+      role: 'user',
+      content: userMessage,
+    })
   }
 
   return (

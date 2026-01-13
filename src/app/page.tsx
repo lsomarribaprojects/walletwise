@@ -8,6 +8,7 @@ import { FinanceKPI } from '@/features/finances/components/FinanceKPI'
 import { TrendChart } from '@/features/finances/components/TrendChart'
 import { CategoryDistribution } from '@/features/finances/components/CategoryDistribution'
 import { AccountsOverview } from '@/features/finances/components/AccountsOverview'
+import { DebtOverviewCard } from '@/features/finances/components/DebtOverviewCard'
 import { TransactionsTable } from '@/features/finances/components/TransactionsTable'
 import { AddTransactionModal } from '@/features/finances/components/AddTransactionModal'
 import { AccountModal } from '@/features/finances/components/AccountModal'
@@ -19,12 +20,16 @@ import {
   deleteTransaction,
 } from '@/features/finances/services/transactions'
 import { fetchCuentas } from '@/features/finances/services/cuentas'
-import { createCuenta } from '@/features/finances/services/accountsService'
+import { createCuenta, updateCuenta, deleteCuenta } from '@/features/finances/services/accountsService'
 import {
   summarizeByCategory,
   calculateBalancesByCuenta,
   calculateBalanceTotal,
+  calculateCommittedExpenses,
+  calculateProjectedBalance,
 } from '@/features/finances/services/analytics'
+import { fetchGastosMensuales, fetchGastosAnuales } from '@/features/finances/services/transactions'
+import { ProjectedBalanceCard } from '@/features/finances/components/ProjectedBalanceCard'
 import { Transaction, TransactionInput, TipoTransaccion, CuentaDB, CuentaInput } from '@/features/finances/types'
 import { QuickActionButtons } from '@/features/finances/components/QuickActionButtons'
 import { Footer } from '@/shared/components/ui/Footer'
@@ -53,12 +58,17 @@ export default function HomePage() {
   const [isWizardOpen, setIsWizardOpen] = useState(false)
   const [initialTipo, setInitialTipo] = useState<TipoTransaccion | undefined>()
   const [editTransaction, setEditTransaction] = useState<Transaction | null>(null)
+  const [editAccount, setEditAccount] = useState<CuentaDB | null>(null)
   const [gastosData, setGastosData] = useState<ReturnType<typeof summarizeByCategory>>([])
   const [ingresosData, setIngresosData] = useState<ReturnType<typeof summarizeByCategory>>([])
   const [cuentas, setCuentas] = useState<CuentaDB[]>([])
   const [balanceTotal, setBalanceTotal] = useState(0)
   const hasProcessedRecurring = useRef(false)
   const hasCheckedOnboarding = useRef(false)
+
+  // Estado para gastos comprometidos
+  const [committedData, setCommittedData] = useState<ReturnType<typeof calculateCommittedExpenses> | null>(null)
+  const [projectedData, setProjectedData] = useState<ReturnType<typeof calculateProjectedBalance> | null>(null)
 
   // Procesar gastos recurrentes automáticamente al cargar
   const processRecurringExpenses = useCallback(async () => {
@@ -99,9 +109,11 @@ export default function HomePage() {
   const loadTransactions = useCallback(async () => {
     setLoading(true)
     try {
-      const [data, cuentasData] = await Promise.all([
+      const [data, cuentasData, gastosMensuales, gastosAnuales] = await Promise.all([
         fetchTransactions(vista),
         fetchCuentas(),
+        fetchGastosMensuales(),
+        fetchGastosAnuales(),
       ])
       setTransactions(data)
       setCuentas(cuentasData)
@@ -110,7 +122,14 @@ export default function HomePage() {
 
       // Calcular balance total real (con balances iniciales)
       const balances = calculateBalancesByCuenta(data, cuentasData)
-      setBalanceTotal(calculateBalanceTotal(balances))
+      const total = calculateBalanceTotal(balances)
+      setBalanceTotal(total)
+
+      // Calcular gastos comprometidos y balance proyectado
+      const committed = calculateCommittedExpenses(gastosMensuales, gastosAnuales, data)
+      const projected = calculateProjectedBalance(total, committed)
+      setCommittedData(committed)
+      setProjectedData(projected)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar')
     } finally {
@@ -164,6 +183,38 @@ export default function HomePage() {
     if (newCuenta) {
       setCuentas((prev) => [...prev, newCuenta])
     }
+  }
+
+  const handleEditAccount = (cuenta: CuentaDB) => {
+    setEditAccount(cuenta)
+    setIsAccountModalOpen(true)
+  }
+
+  const handleUpdateAccount = async (cuenta: CuentaInput) => {
+    if (!editAccount) return
+    const updated = await updateCuenta(editAccount.id, cuenta)
+    if (updated) {
+      setCuentas((prev) => prev.map((c) => (c.id === editAccount.id ? updated : c)))
+      // Recalcular balances
+      const balances = calculateBalancesByCuenta(transactions, cuentas.map((c) => (c.id === editAccount.id ? updated : c)))
+      setBalanceTotal(calculateBalanceTotal(balances))
+    }
+    setEditAccount(null)
+  }
+
+  const handleDeleteAccount = async (id: string) => {
+    const success = await deleteCuenta(id)
+    if (success) {
+      setCuentas((prev) => prev.filter((c) => c.id !== id))
+      // Recalcular balances
+      const balances = calculateBalancesByCuenta(transactions, cuentas.filter((c) => c.id !== id))
+      setBalanceTotal(calculateBalanceTotal(balances))
+    }
+  }
+
+  const handleCloseAccountModal = () => {
+    setIsAccountModalOpen(false)
+    setEditAccount(null)
   }
 
   // Check if user needs onboarding (first time, no accounts)
@@ -257,12 +308,29 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Accounts Overview */}
-            <AccountsOverview
-              transactions={transactions}
-              cuentas={cuentas}
-              onAddAccount={() => setIsAccountModalOpen(true)}
-            />
+            {/* Accounts and Projected Balance */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <AccountsOverview
+                transactions={transactions}
+                cuentas={cuentas}
+                onAddAccount={() => {
+                  setEditAccount(null)
+                  setIsAccountModalOpen(true)
+                }}
+                onEditAccount={handleEditAccount}
+                onDeleteAccount={handleDeleteAccount}
+              />
+              {/* Balance proyectado con gastos comprometidos */}
+              {committedData && projectedData && (
+                <ProjectedBalanceCard
+                  projected={projectedData}
+                  committed={committedData}
+                />
+              )}
+            </div>
+
+            {/* Debt Overview - tarjetas de crédito */}
+            <DebtOverviewCard />
 
             {/* Table */}
             <TransactionsTable
@@ -295,8 +363,14 @@ export default function HomePage() {
       {/* Account Modal */}
       <AccountModal
         isOpen={isAccountModalOpen}
-        onClose={() => setIsAccountModalOpen(false)}
-        onSave={handleAddAccount}
+        onClose={handleCloseAccountModal}
+        onSave={editAccount ? handleUpdateAccount : handleAddAccount}
+        initialData={editAccount ? {
+          nombre: editAccount.nombre,
+          tipo: editAccount.tipo,
+          balance_inicial: editAccount.balance_inicial,
+          color: editAccount.color || '#9333EA',
+        } : undefined}
       />
 
       {/* Onboarding Wizard */}

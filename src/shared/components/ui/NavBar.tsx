@@ -10,6 +10,7 @@ import {
   ChevronDown,
   CalendarClock,
   CalendarDays,
+  CreditCard,
   FileText,
   LogOut,
   User,
@@ -40,6 +41,7 @@ export function NavBar() {
     { href: '/wizard', label: t.nav.roiCalculator, icon: Calculator },
     { href: '/finances/recurring', label: t.nav.monthly, icon: CalendarClock },
     { href: '/finances/annual', label: t.nav.annual, icon: CalendarDays },
+    { href: '/finances/credit-cards', label: t.nav.creditCards, icon: CreditCard },
     { href: '/finances/reports', label: t.nav.reports, icon: FileText },
     // Solo mostrar Admin Panel si el usuario es admin
     ...(profile?.role === 'admin' ? [

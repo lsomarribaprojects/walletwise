@@ -9,12 +9,15 @@ import {
   FinanceKPIs,
   VistaRango,
 } from '../types'
+import type { CreditCard, CreditCardMetrics } from '../types/creditCards'
+import { calculateCreditCardMetrics } from '../services/debtCalculator'
 
 interface FinancesState {
   // Data
   transactions: Transaction[]
   gastosMensuales: GastoMensual[]
   gastosAnuales: GastoAnual[]
+  creditCards: CreditCard[]
 
   // UI State
   vista: VistaRango
@@ -23,6 +26,7 @@ interface FinancesState {
 
   // Computed (cached)
   kpis: FinanceKPIs
+  creditCardMetrics: CreditCardMetrics
 
   // Actions
   setTransactions: (transactions: Transaction[]) => void
@@ -39,6 +43,13 @@ interface FinancesState {
   addGastoAnual: (gasto: GastoAnual) => void
   removeGastoAnual: (id: string) => void
   updateGastoAnual: (id: string, updates: Partial<GastoAnual>) => void
+
+  // Credit Card Actions
+  setCreditCards: (cards: CreditCard[]) => void
+  addCreditCard: (card: CreditCard) => void
+  removeCreditCard: (id: string) => void
+  updateCreditCard: (id: string, updates: Partial<CreditCard>) => void
+  recalculateCreditCardMetrics: () => void
 
   setVista: (vista: VistaRango) => void
   setLoading: (loading: boolean) => void
@@ -76,6 +87,16 @@ const DEFAULT_KPIS: FinanceKPIs = {
   transaccionesCount: 0,
 }
 
+const DEFAULT_CC_METRICS: CreditCardMetrics = {
+  deuda_total: 0,
+  limite_total: 0,
+  utilizacion_promedio: 0,
+  tasa_promedio_ponderada: 0,
+  pago_minimo_total: 0,
+  intereses_mensuales_proyectados: 0,
+  num_tarjetas: 0,
+}
+
 export const useFinancesStore = create<FinancesState>()(
   persist(
     (set, get) => ({
@@ -83,10 +104,12 @@ export const useFinancesStore = create<FinancesState>()(
       transactions: [],
       gastosMensuales: [],
       gastosAnuales: [],
+      creditCards: [],
       vista: 'mensual',
       isLoading: false,
       error: null,
       kpis: DEFAULT_KPIS,
+      creditCardMetrics: DEFAULT_CC_METRICS,
 
       // Transaction actions
       setTransactions: (transactions) => {
@@ -148,6 +171,32 @@ export const useFinancesStore = create<FinancesState>()(
         })
       },
 
+      // Credit Card actions
+      setCreditCards: (cards) => {
+        set({ creditCards: cards, creditCardMetrics: calculateCreditCardMetrics(cards) })
+      },
+
+      addCreditCard: (card) => {
+        const newCards = [...get().creditCards, card]
+        set({ creditCards: newCards, creditCardMetrics: calculateCreditCardMetrics(newCards) })
+      },
+
+      removeCreditCard: (id) => {
+        const newCards = get().creditCards.filter((c) => c.id !== id)
+        set({ creditCards: newCards, creditCardMetrics: calculateCreditCardMetrics(newCards) })
+      },
+
+      updateCreditCard: (id, updates) => {
+        const newCards = get().creditCards.map((c) =>
+          c.id === id ? { ...c, ...updates } : c
+        )
+        set({ creditCards: newCards, creditCardMetrics: calculateCreditCardMetrics(newCards) })
+      },
+
+      recalculateCreditCardMetrics: () => {
+        set({ creditCardMetrics: calculateCreditCardMetrics(get().creditCards) })
+      },
+
       // UI actions
       setVista: (vista) => set({ vista }),
       setLoading: (isLoading) => set({ isLoading }),
@@ -162,10 +211,12 @@ export const useFinancesStore = create<FinancesState>()(
           transactions: [],
           gastosMensuales: [],
           gastosAnuales: [],
+          creditCards: [],
           vista: 'mensual',
           isLoading: false,
           error: null,
           kpis: DEFAULT_KPIS,
+          creditCardMetrics: DEFAULT_CC_METRICS,
         })
       },
     }),

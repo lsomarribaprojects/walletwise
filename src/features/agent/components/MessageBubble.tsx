@@ -1,25 +1,16 @@
-import type { UIMessage } from '@ai-sdk/react'
+import type { Message } from '@ai-sdk/react'
 import ReactMarkdown from 'react-markdown'
 
 interface MessageBubbleProps {
-  message: UIMessage
+  message: Message
 }
 
-// Extract text content from UIMessage (AI SDK v5 uses parts array)
-function getMessageContent(message: UIMessage): string {
-  // If content exists directly (legacy or manual messages)
-  if ('content' in message && typeof message.content === 'string') {
+// Extract text content from Message
+function getMessageContent(message: Message): string {
+  // Standard useChat messages have content property
+  if (typeof message.content === 'string') {
     return message.content
   }
-
-  // AI SDK v5: extract text from parts array
-  if (message.parts && Array.isArray(message.parts)) {
-    return message.parts
-      .filter((part): part is { type: 'text'; text: string } => part.type === 'text')
-      .map(part => part.text)
-      .join('')
-  }
-
   return ''
 }
 

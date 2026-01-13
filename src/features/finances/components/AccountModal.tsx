@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { X, CreditCard, Banknote, PiggyBank, TrendingUp, Wallet } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, CreditCard, Banknote, PiggyBank, TrendingUp } from 'lucide-react'
 import { CuentaInput, TipoCuenta } from '../types'
 
 interface AccountModalProps {
@@ -12,11 +12,10 @@ interface AccountModalProps {
 }
 
 const ACCOUNT_TYPES: { value: TipoCuenta; label: string; icon: React.ElementType; description: string }[] = [
-  { value: 'debito', label: 'Debito', icon: CreditCard, description: 'Cuenta de debito bancaria' },
-  { value: 'credito', label: 'Credito', icon: Wallet, description: 'Tarjeta de credito' },
+  { value: 'debito', label: 'Debito', icon: CreditCard, description: 'Cuenta bancaria' },
   { value: 'efectivo', label: 'Efectivo', icon: Banknote, description: 'Dinero en efectivo' },
   { value: 'ahorro', label: 'Ahorro', icon: PiggyBank, description: 'Cuenta de ahorro' },
-  { value: 'inversion', label: 'Inversion', icon: TrendingUp, description: 'Cuenta de inversiones' },
+  { value: 'inversion', label: 'Inversion', icon: TrendingUp, description: 'Inversiones' },
 ]
 
 const COLORS = [
@@ -37,6 +36,17 @@ export function AccountModal({ isOpen, onClose, onSave, initialData }: AccountMo
   const [color, setColor] = useState(initialData?.color || '#9333EA')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Resetear formulario cuando cambia initialData o se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setNombre(initialData?.nombre || '')
+      setTipo(initialData?.tipo || 'debito')
+      setBalanceInicial(initialData?.balance_inicial?.toString() || '0')
+      setColor(initialData?.color || '#9333EA')
+      setError(null)
+    }
+  }, [isOpen, initialData])
 
   if (!isOpen) return null
 
