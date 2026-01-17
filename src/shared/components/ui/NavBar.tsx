@@ -26,6 +26,7 @@ import { signout } from '@/actions/auth'
 import { useAgentSidebar } from '@/shared/context/AgentSidebarContext'
 import { useLanguage } from '@/shared/i18n'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { ThemeSwitcher } from './ThemeSwitcher'
 import { AlertDropdown } from '@/features/alerts'
 
 export function NavBar() {
@@ -215,6 +216,9 @@ export function NavBar() {
             {!loading && user && (
               <AlertDropdown className="ml-1" />
             )}
+
+            {/* Theme Switcher */}
+            <ThemeSwitcher />
 
             {/* Language Switcher */}
             <LanguageSwitcher />

@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { Tags, Bot, Calculator, UserCircle, Loader2, Users } from 'lucide-react'
+import { Tags, Bot, Calculator, UserCircle, Loader2, Users, Ticket } from 'lucide-react'
 import { useAdminConfig } from '@/features/admin/hooks/useAdminConfig'
 import { CategoryManager } from '@/features/admin/components/CategoryManager'
 import { AgentPromptEditor } from '@/features/admin/components/AgentPromptEditor'
 import { CalculatorSettings } from '@/features/admin/components/CalculatorSettings'
 import { AccountSection } from '@/features/admin/components/AccountSection'
 import { UserManagement } from '@/features/admin/components/UserManagement'
+import { DiscountCodeManager } from '@/features/admin/components/DiscountCodeManager'
 
-type TabId = 'users' | 'categories' | 'agent' | 'calculator' | 'account'
+type TabId = 'users' | 'discounts' | 'categories' | 'agent' | 'calculator' | 'account'
 
 interface Tab {
   id: TabId
@@ -19,6 +20,7 @@ interface Tab {
 
 const TABS: Tab[] = [
   { id: 'users', label: 'Usuarios', icon: <Users className="w-4 h-4" /> },
+  { id: 'discounts', label: 'Descuentos', icon: <Ticket className="w-4 h-4" /> },
   { id: 'categories', label: 'Categorias', icon: <Tags className="w-4 h-4" /> },
   { id: 'agent', label: 'CFO Agent', icon: <Bot className="w-4 h-4" /> },
   { id: 'calculator', label: 'Calculadora', icon: <Calculator className="w-4 h-4" /> },
@@ -61,6 +63,8 @@ export default function AdminPage() {
     switch (activeTab) {
       case 'users':
         return <UserManagement />
+      case 'discounts':
+        return <DiscountCodeManager />
       case 'categories':
         return (
           <CategoryManager

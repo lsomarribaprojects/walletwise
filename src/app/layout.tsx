@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { LanguageProvider } from '@/shared/i18n'
+import { ThemeProvider } from '@/shared/contexts/ThemeContext'
 
 export const metadata: Metadata = {
   title: 'Walletwise - Gestion Financiera Inteligente',
@@ -36,9 +37,11 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className="min-h-screen bg-neu-bg antialiased" suppressHydrationWarning>
-        <LanguageProvider>
-          {children}
-        </LanguageProvider>
+        <ThemeProvider>
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

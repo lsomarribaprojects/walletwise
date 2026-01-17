@@ -3,10 +3,11 @@
 @tailwind utilities;
 
 /*
- * Profits OS - Neumorphism Theme
+ * Walletwise - Neumorphism Theme (Light & Dark)
  */
 
 :root {
+  /* Light Theme (Default) */
   --neu-bg: #e6e7ee;
   --neu-dark: #b8b9be;
   --neu-light: #ffffff;
@@ -18,7 +19,21 @@
   --neu-danger: #ef4444;
 }
 
+/* Dark Theme */
+.dark {
+  --neu-bg: #1a1b26;
+  --neu-dark: #0f0f17;
+  --neu-light: #24253a;
+  --neu-text: #e2e8f0;
+  --neu-text-muted: #94a3b8;
+  --neu-accent: #60a5fa;
+  --neu-success: #34d399;
+  --neu-warning: #fbbf24;
+  --neu-danger: #f87171;
+}
+
 body {
   background-color: var(--neu-bg);
   color: var(--neu-text);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }

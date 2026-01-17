@@ -5,26 +5,35 @@ const config: Config = {
   content: [
     './src/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         neu: {
-          bg: '#e6e7ee',
-          dark: '#b8b9be',
-          light: '#ffffff',
+          bg: 'var(--neu-bg)',
+          dark: 'var(--neu-dark)',
+          light: 'var(--neu-light)',
+          text: 'var(--neu-text)',
+          'text-muted': 'var(--neu-text-muted)',
+          accent: 'var(--neu-accent)',
+          success: 'var(--neu-success)',
+          warning: 'var(--neu-warning)',
+          danger: 'var(--neu-danger)',
+          // Legacy support
           'bg-dark': '#2d2d2d',
           'dark-shadow': '#1a1a1a',
           'light-shadow': '#404040',
         },
       },
       boxShadow: {
-        'neu-sm': '3px 3px 6px #b8b9be, -3px -3px 6px #ffffff',
-        'neu': '6px 6px 12px #b8b9be, -6px -6px 12px #ffffff',
-        'neu-md': '8px 8px 16px #b8b9be, -8px -8px 16px #ffffff',
-        'neu-lg': '12px 12px 24px #b8b9be, -12px -12px 24px #ffffff',
-        'neu-inset-sm': 'inset 2px 2px 4px #b8b9be, inset -2px -2px 4px #ffffff',
-        'neu-inset': 'inset 4px 4px 8px #b8b9be, inset -4px -4px 8px #ffffff',
-        'neu-inset-md': 'inset 6px 6px 12px #b8b9be, inset -6px -6px 12px #ffffff',
+        // Light mode shadows
+        'neu-sm': '3px 3px 6px var(--neu-dark), -3px -3px 6px var(--neu-light)',
+        'neu': '6px 6px 12px var(--neu-dark), -6px -6px 12px var(--neu-light)',
+        'neu-md': '8px 8px 16px var(--neu-dark), -8px -8px 16px var(--neu-light)',
+        'neu-lg': '12px 12px 24px var(--neu-dark), -12px -12px 24px var(--neu-light)',
+        'neu-inset-sm': 'inset 2px 2px 4px var(--neu-dark), inset -2px -2px 4px var(--neu-light)',
+        'neu-inset': 'inset 4px 4px 8px var(--neu-dark), inset -4px -4px 8px var(--neu-light)',
+        'neu-inset-md': 'inset 6px 6px 12px var(--neu-dark), inset -6px -6px 12px var(--neu-light)',
       },
     },
   },
