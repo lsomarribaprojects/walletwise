@@ -221,7 +221,8 @@ export function CreditCardModal({ isOpen, onClose, onSave, editCard }: CreditCar
                 <NeuInput
                   type="number"
                   min="0"
-                  placeholder="50000"
+                  step="0.01"
+                  placeholder="50000.00"
                   className="pl-7"
                   value={form.limite_credito || ''}
                   onChange={(e) => setForm({ ...form, limite_credito: parseFloat(e.target.value) || 0 })}
@@ -240,7 +241,8 @@ export function CreditCardModal({ isOpen, onClose, onSave, editCard }: CreditCar
               <NeuInput
                 type="number"
                 min="0"
-                placeholder="15000"
+                step="0.01"
+                placeholder="15000.00"
                 className="pl-7"
                 value={form.saldo_actual || ''}
                 onChange={(e) => setForm({ ...form, saldo_actual: parseFloat(e.target.value) || 0 })}
@@ -288,7 +290,8 @@ export function CreditCardModal({ isOpen, onClose, onSave, editCard }: CreditCar
               <NeuInput
                 type="number"
                 min="0"
-                placeholder="500"
+                step="0.01"
+                placeholder="500.00"
                 className="pl-7"
                 value={form.pago_minimo || ''}
                 onChange={(e) => setForm({ ...form, pago_minimo: parseFloat(e.target.value) || undefined })}
