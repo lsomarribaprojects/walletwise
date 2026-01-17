@@ -39,6 +39,10 @@ export type BudgetPeriod =
 
 export type ConversationRole = 'user' | 'assistant' | 'system';
 
+export type AlertType = 'warning' | 'opportunity' | 'milestone' | 'recommendation';
+
+export type AlertPriority = 'low' | 'medium' | 'high';
+
 // ============================================================================
 // DATABASE TABLES
 // ============================================================================
@@ -156,6 +160,22 @@ export interface Budget {
   updated_at: string; // ISO timestamp
 }
 
+export interface UserAlert {
+  id: string; // UUID
+  user_id: string; // UUID (references profiles.id)
+  type: AlertType;
+  priority: AlertPriority;
+  title: string;
+  message: string;
+  action_label: string | null;
+  action_href: string | null;
+  is_read: boolean; // Default: false
+  is_dismissed: boolean; // Default: false
+  expires_at: string | null; // ISO timestamp
+  metadata: Record<string, unknown>; // JSONB
+  created_at: string; // ISO timestamp
+}
+
 // ============================================================================
 // INSERT TYPES (for creating new records)
 // ============================================================================
@@ -219,6 +239,14 @@ export type BudgetInsert = Omit<Budget, 'id' | 'created_at' | 'updated_at'> & {
   updated_at?: string;
 };
 
+export type UserAlertInsert = Omit<UserAlert, 'id' | 'created_at'> & {
+  id?: string;
+  priority?: AlertPriority;
+  is_read?: boolean;
+  is_dismissed?: boolean;
+  created_at?: string;
+};
+
 // ============================================================================
 // UPDATE TYPES (for updating existing records)
 // ============================================================================
@@ -236,6 +264,8 @@ export type TransactionUpdate = Partial<Omit<Transaction, 'id' | 'user_id' | 'cr
 export type RecurringExpenseUpdate = Partial<Omit<RecurringExpense, 'id' | 'user_id' | 'created_at' | 'updated_at'>>;
 
 export type BudgetUpdate = Partial<Omit<Budget, 'id' | 'user_id' | 'created_at' | 'updated_at'>>;
+
+export type UserAlertUpdate = Partial<Omit<UserAlert, 'id' | 'user_id' | 'created_at'>>;
 
 // ============================================================================
 // JOINED/EXTENDED TYPES (for queries with relations)
@@ -383,6 +413,11 @@ export interface Database {
         Insert: BudgetInsert;
         Update: BudgetUpdate;
       };
+      user_alerts: {
+        Row: UserAlert;
+        Insert: UserAlertInsert;
+        Update: UserAlertUpdate;
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -414,6 +449,18 @@ export interface Database {
         Args: Record<string, never>;
         Returns: ProcessRecurringResult[];
       };
+      get_unread_alerts_count: {
+        Args: { user_uuid: string };
+        Returns: number;
+      };
+      dismiss_expired_alerts: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
+      cleanup_old_alerts: {
+        Args: Record<string, never>;
+        Returns: number;
+      };
     };
     Enums: {
       account_type: AccountType;
@@ -422,6 +469,8 @@ export interface Database {
       recurring_frequency: RecurringFrequency;
       budget_period: BudgetPeriod;
       conversation_role: ConversationRole;
+      alert_type: AlertType;
+      alert_priority: AlertPriority;
     };
   };
 }

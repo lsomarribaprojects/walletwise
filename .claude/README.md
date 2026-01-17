@@ -416,8 +416,14 @@ En tu dashboard de Vercel:
 
 ## 🔄 Versionado
 
-**Template Version:** 2.0.0
-**Last Updated:** 2024-12-16
+**Template Version:** 3.1.0
+**Last Updated:** 2025-01-11
+
+### Novedades V3
+- **Tesla Factory Analogy**: Sistema unificado con metáfora de fábrica
+- **Auto-Blindaje**: La fábrica se fortalece con cada error documentado
+- **AI Templates Reorganizados**: Separación de agentes y capacidades standalone
+- **GEMINI.md**: Soporte para Gemini como alternativa
 
 ---
 

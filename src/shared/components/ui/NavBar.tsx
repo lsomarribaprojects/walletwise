@@ -17,12 +17,16 @@ import {
   Bot,
   Menu,
   Settings,
+  PiggyBank,
+  Target,
+  TrendingUp,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { signout } from '@/actions/auth'
 import { useAgentSidebar } from '@/shared/context/AgentSidebarContext'
 import { useLanguage } from '@/shared/i18n'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { AlertDropdown } from '@/features/alerts'
 
 export function NavBar() {
   const pathname = usePathname()
@@ -33,7 +37,7 @@ export function NavBar() {
   const { t } = useLanguage()
 
   const isDashboardActive = pathname === '/'
-  const isFinanceActive = pathname.startsWith('/finances') || pathname === '/wizard'
+  const isFinanceActive = pathname.startsWith('/finances') || pathname === '/wizard' || pathname === '/budgets' || pathname === '/goals' || pathname === '/credit-score'
   const isCFOActive = pathname === '/agent'
 
   // Build finance submenu items with translations
@@ -42,6 +46,9 @@ export function NavBar() {
     { href: '/finances/recurring', label: t.nav.monthly, icon: CalendarClock },
     { href: '/finances/annual', label: t.nav.annual, icon: CalendarDays },
     { href: '/finances/credit-cards', label: t.nav.creditCards, icon: CreditCard },
+    { href: '/budgets', label: t.nav.budgets, icon: PiggyBank },
+    { href: '/goals', label: t.goals.title, icon: Target },
+    { href: '/credit-score', label: t.creditScore.title, icon: TrendingUp },
     { href: '/finances/reports', label: t.nav.reports, icon: FileText },
     // Solo mostrar Admin Panel si el usuario es admin
     ...(profile?.role === 'admin' ? [
@@ -202,6 +209,11 @@ export function NavBar() {
                   </div>
                 )}
               </div>
+            )}
+
+            {/* Alerts Dropdown */}
+            {!loading && user && (
+              <AlertDropdown className="ml-1" />
             )}
 
             {/* Language Switcher */}

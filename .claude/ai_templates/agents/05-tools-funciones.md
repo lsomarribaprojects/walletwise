@@ -1,22 +1,35 @@
-# Bloque 05: Tools y Funciones
+# Bloque 05: Tools y Funciones (AI SDK 5)
 
 > Agregar herramientas que el modelo puede ejecutar.
 
 **Tiempo:** 20 minutos
 **Prerequisitos:** Bloque 01 (Chat Streaming)
+**Version:** AI SDK 5 (Diciembre 2025)
 
 ---
 
 ## Que Obtienes
 
-- Tools definidas con Zod schemas
+- Tools definidas con Zod schemas (sintaxis AI SDK 5)
 - Ejecucion automatica o manual
 - Resultados visibles en el chat
-- Loop agentico con maxSteps
+- Loop agentico con `stopWhen`
+- Control dinamico con `prepareStep`
 
 ---
 
-## 1. Definir Tools con Zod
+## Cambios en AI SDK 5
+
+| AI SDK 4 (antes) | AI SDK 5 (ahora) |
+|------------------|------------------|
+| `parameters: z.object({...})` | `inputSchema: z.object({...})` |
+| `maxSteps: 5` | `stopWhen: stepCountIs(5)` |
+| N/A | `outputSchema: z.object({...})` (opcional) |
+| N/A | `prepareStep` (control dinamico) |
+
+---
+
+## 1. Definir Tools con Zod (Sintaxis AI SDK 5)
 
 ```typescript
 // features/chat/tools/index.ts
@@ -27,16 +40,22 @@ import { tool } from 'ai'
 // Tool: Obtener clima
 export const getWeather = tool({
   description: 'Obtiene el clima actual de una ciudad',
-  parameters: z.object({
+  // AI SDK 5: Usa inputSchema en lugar de parameters
+  inputSchema: z.object({
     city: z.string().describe('Nombre de la ciudad'),
+  }),
+  // Opcional: Define el schema del output para type safety
+  outputSchema: z.object({
+    city: z.string(),
+    temperature: z.number(),
+    condition: z.enum(['soleado', 'nublado', 'lluvioso']),
   }),
   execute: async ({ city }) => {
     // Aqui iria la llamada a una API de clima
-    // Por ahora simulamos
     return {
       city,
       temperature: Math.floor(Math.random() * 30) + 10,
-      condition: ['soleado', 'nublado', 'lluvioso'][Math.floor(Math.random() * 3)],
+      condition: ['soleado', 'nublado', 'lluvioso'][Math.floor(Math.random() * 3)] as 'soleado' | 'nublado' | 'lluvioso',
     }
   },
 })
@@ -44,7 +63,7 @@ export const getWeather = tool({
 // Tool: Calcular
 export const calculate = tool({
   description: 'Realiza calculos matematicos',
-  parameters: z.object({
+  inputSchema: z.object({
     operation: z.enum(['sum', 'subtract', 'multiply', 'divide']),
     a: z.number(),
     b: z.number(),
@@ -65,10 +84,10 @@ export const calculate = tool({
   },
 })
 
-// Tool: Buscar en base de datos (ejemplo)
+// Tool: Buscar en base de datos
 export const searchProducts = tool({
   description: 'Busca productos en el catalogo',
-  parameters: z.object({
+  inputSchema: z.object({
     query: z.string().describe('Termino de busqueda'),
     category: z.string().optional().describe('Categoria opcional'),
     maxPrice: z.number().optional().describe('Precio maximo'),
@@ -96,14 +115,13 @@ export const tools = {
 
 ---
 
-## 2. API Route con Tools
+## 2. API Route con Tools (AI SDK 5)
 
 ```typescript
 // app/api/chat/route.ts
-// MODIFICAR: Agregar tools
 
 import { openrouter, MODELS } from '@/lib/ai/openrouter'
-import { streamText, convertToModelMessages, type UIMessage } from 'ai'
+import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from 'ai'
 import { tools } from '@/features/chat/tools'
 
 const SYSTEM_PROMPT = `Eres un asistente con acceso a herramientas.
@@ -125,7 +143,8 @@ export async function POST(req: Request) {
     system: SYSTEM_PROMPT,
     messages: modelMessages,
     tools,
-    maxSteps: 5,  // Permite multiples llamadas a tools
+    // AI SDK 5: stopWhen reemplaza maxSteps
+    stopWhen: stepCountIs(5),  // Maximo 5 iteraciones del loop
   })
 
   return result.toUIMessageStreamResponse()
@@ -134,7 +153,59 @@ export async function POST(req: Request) {
 
 ---
 
-## 3. Mostrar Tool Calls en UI
+## 3. Control Avanzado con prepareStep
+
+`prepareStep` te permite ajustar configuracion antes de cada paso del loop:
+
+```typescript
+// app/api/chat/route.ts
+
+import { streamText, stepCountIs } from 'ai'
+
+export async function POST(req: Request) {
+  const { messages } = await req.json()
+
+  const result = streamText({
+    model: openrouter(MODELS.balanced),
+    system: SYSTEM_PROMPT,
+    messages,
+    tools,
+    stopWhen: stepCountIs(5),
+
+    // AI SDK 5: Control dinamico por paso
+    prepareStep: async ({ stepNumber, previousSteps }) => {
+      // Ejemplo: Cambiar modelo segun complejidad
+      if (stepNumber > 2) {
+        return {
+          model: openrouter(MODELS.powerful),  // Usar modelo mas potente
+        }
+      }
+
+      // Ejemplo: Limitar tools despues de ciertos pasos
+      if (stepNumber > 3) {
+        return {
+          tools: { calculate },  // Solo permitir calcular
+        }
+      }
+
+      // Ejemplo: Comprimir mensajes si hay muchos
+      if (previousSteps.length > 10) {
+        return {
+          messages: compressMessages(previousSteps),
+        }
+      }
+
+      return {}  // Sin cambios
+    },
+  })
+
+  return result.toUIMessageStreamResponse()
+}
+```
+
+---
+
+## 4. Mostrar Tool Calls en UI
 
 ```typescript
 // features/chat/components/ChatWithTools.tsx
@@ -164,7 +235,6 @@ export function ChatWithTools() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((m) => (
           <div key={m.id} className="space-y-2">
-            {/* Rol del mensaje */}
             <div className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div
                 className={`max-w-[80%] p-3 rounded-lg ${
@@ -229,7 +299,7 @@ export function ChatWithTools() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Escribe tu mensaje... (prueba: '¿Qué clima hace en Madrid?' o 'Calcula 25 * 4')"
+            placeholder="Prueba: 'Que clima hace en Madrid?' o 'Calcula 25 * 4'"
             disabled={isLoading}
             className="flex-1 px-4 py-2 border rounded-lg"
           />
@@ -249,7 +319,7 @@ export function ChatWithTools() {
 
 ---
 
-## 4. Tool con Confirmacion Manual
+## 5. Tool con Confirmacion Manual
 
 Si quieres que el usuario confirme antes de ejecutar:
 
@@ -258,7 +328,7 @@ Si quieres que el usuario confirme antes de ejecutar:
 
 export const deleteItem = tool({
   description: 'Elimina un item (requiere confirmacion)',
-  parameters: z.object({
+  inputSchema: z.object({
     itemId: z.string(),
     itemName: z.string(),
   }),
@@ -269,7 +339,6 @@ export const deleteItem = tool({
 ```typescript
 // En el componente, manejar confirmacion
 const handleToolConfirm = async (toolCallId: string, result: any) => {
-  // Enviar resultado de la tool manualmente
   sendMessage({
     text: '',
     toolResults: [{
@@ -282,14 +351,40 @@ const handleToolConfirm = async (toolCallId: string, result: any) => {
 
 ---
 
-## 5. Ejemplos de Tools Utiles
+## 6. Condiciones de Parada Personalizadas
+
+```typescript
+import { streamText, stopWhen, hasToolCall, and, or, stepCountIs } from 'ai'
+
+const result = streamText({
+  model: openrouter(MODELS.balanced),
+  messages,
+  tools,
+
+  // Parar cuando: 5 pasos O se llama a finalAnswer
+  stopWhen: or(
+    stepCountIs(5),
+    hasToolCall('finalAnswer')
+  ),
+
+  // O combinar condiciones
+  stopWhen: and(
+    stepCountIs(3),
+    hasToolCall('searchProducts')
+  ),
+})
+```
+
+---
+
+## 7. Ejemplos de Tools Utiles
 
 ### Tool: Consultar Supabase
 
 ```typescript
 export const queryDatabase = tool({
   description: 'Consulta datos de la base de datos',
-  parameters: z.object({
+  inputSchema: z.object({
     table: z.enum(['products', 'orders', 'users']),
     filters: z.record(z.string()).optional(),
     limit: z.number().default(10),
@@ -316,7 +411,7 @@ export const queryDatabase = tool({
 ```typescript
 export const sendEmail = tool({
   description: 'Envia un email',
-  parameters: z.object({
+  inputSchema: z.object({
     to: z.string().email(),
     subject: z.string(),
     body: z.string(),
@@ -334,7 +429,7 @@ export const sendEmail = tool({
 ```typescript
 export const createRecord = tool({
   description: 'Crea un nuevo registro en la base de datos',
-  parameters: z.object({
+  inputSchema: z.object({
     table: z.enum(['products', 'orders']),
     data: z.record(z.any()),
   }),
@@ -356,11 +451,27 @@ export const createRecord = tool({
 
 ## Checklist
 
-- [ ] Tools definidas con Zod schemas
-- [ ] API route incluye tools y maxSteps
+- [ ] Tools definidas con `inputSchema` (no `parameters`)
+- [ ] API route usa `stopWhen` (no `maxSteps`)
 - [ ] UI muestra tool calls y resultados
 - [ ] Tools ejecutan correctamente
+- [ ] (Opcional) `outputSchema` para type safety
+- [ ] (Opcional) `prepareStep` para control dinamico
 - [ ] (Opcional) Confirmacion manual para tools sensibles
+
+---
+
+## Cuando usar Tools vs Regex Detection
+
+| Usa Tools cuando: | Usa Regex Detection cuando: |
+|-------------------|----------------------------|
+| El modelo debe DECIDIR que accion tomar | La accion es predecible por keywords |
+| Necesitas confirmacion del usuario | Solo necesitas enriquecer contexto |
+| La accion tiene side effects | Es read-only (queries) |
+| Multiples opciones complejas | Patron simple y conocido |
+
+**Ejemplo**: Para un CFO que consulta finanzas, regex es mas eficiente.
+Para un asistente general que puede enviar emails, crear registros, etc., usa Tools.
 
 ---
 

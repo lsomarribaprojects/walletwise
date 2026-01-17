@@ -971,6 +971,147 @@ export default function AgentPage() {
 
 ---
 
+## 7. Memoria del Agente (IMPORTANTE)
+
+> **Historial sin memoria es un log muerto.** Si guardas el historial, el modelo debe poder usarlo.
+
+### 7.1 Funcion para Convertir Acciones a Historial
+
+```typescript
+// En tu pagina de agente o en un util
+// Convierte las acciones de UI a formato de mensajes para el modelo
+
+function actionsToHistory(
+  actions: AgentAction[]
+): Array<{ role: 'user' | 'assistant'; content: string }> {
+  const history: Array<{ role: 'user' | 'assistant'; content: string }> = []
+
+  for (const action of actions) {
+    if (action._type === 'user_message' && action.text?.trim()) {
+      history.push({ role: 'user', content: action.text })
+    } else if (action._type === 'message' && action.text?.trim()) {
+      history.push({ role: 'assistant', content: action.text })
+    }
+  }
+
+  return history
+}
+```
+
+### 7.2 Enviar Historial al API
+
+```typescript
+// En handleSubmit, antes del fetch:
+
+const handleSubmit = async (e: FormEvent) => {
+  // ...
+
+  // Convertir acciones previas a historial para memoria
+  const history = actionsToHistory(actions)
+
+  const res = await fetch('/api/agent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      prompt: userMessage,
+      context,
+      model: selectedModel,
+      history, // ← NUEVO: Pasar historial
+    }),
+  })
+  // ...
+}
+```
+
+### 7.3 Usar Historial en el API Route
+
+```typescript
+// app/api/agent/route.ts
+
+// Tipo para mensajes del historial
+interface HistoryMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export async function POST(req: Request) {
+  const {
+    prompt,
+    context,
+    model: modelKey,
+    history = [] // ← NUEVO: Recibir historial
+  } = await req.json() as {
+    prompt: string
+    context?: string
+    model?: string
+    history?: HistoryMessage[]
+  }
+
+  // ... setup del modelo ...
+
+  // Construir mensajes con historial previo (ultimos 10)
+  const previousMessages = history.slice(-10).map(m => ({
+    role: m.role as 'user' | 'assistant',
+    content: m.content
+  }))
+
+  const { textStream } = streamText({
+    model: openrouter(modelId),
+    system: systemPrompt,
+    messages: [
+      ...previousMessages,       // ← Mensajes anteriores
+      { role: 'user', content: userContent }  // ← Mensaje actual
+    ],
+    temperature: 0,
+  })
+
+  // ... resto del streaming ...
+}
+```
+
+### 7.4 Actualizar System Prompt
+
+```typescript
+const SYSTEM_PROMPT = `Eres un asistente con acceso a datos.
+
+MEMORIA: Tienes acceso al historial de la conversacion.
+Recuerda nombres, preferencias y contexto previo del usuario.
+
+// ... resto del prompt ...
+`
+```
+
+### Por que esto importa
+
+| Sin Memoria | Con Memoria |
+|-------------|-------------|
+| Usuario: "Me llamo Juan" | Usuario: "Me llamo Juan" |
+| AI: "Hola Juan!" | AI: "Hola Juan!" |
+| Usuario: "Como me llamo?" | Usuario: "Como me llamo?" |
+| AI: "No lo se" ❌ | AI: "Te llamas Juan" ✅ |
+
+### Notas
+
+- **Limitamos a 10 mensajes** para no exceder el contexto del modelo
+- Solo convertimos `user_message` y `message`, ignoramos `think`, `analyze`, etc.
+- El historial se pasa como mensajes previos, NO como parte del system prompt
+
+---
+
+## Checklist Actualizado
+
+- [ ] Tablas creadas en Supabase (`agent_sessions`, `agent_actions`)
+- [ ] RLS policies configuradas
+- [ ] `agentHistoryService` implementado
+- [ ] `useAgentHistory` hook funcionando
+- [ ] `AgentSidebar` con soporte mobile
+- [ ] **`actionsToHistory()` implementado** ← NUEVO
+- [ ] **Historial enviado al API** ← NUEVO
+- [ ] **API usa mensajes previos en streamText** ← NUEVO
+- [ ] Acciones se guardan y cargan correctamente
+
+---
+
 ## Siguiente Bloque
 
 - **Analizar imagenes**: `04-vision-analysis.md`

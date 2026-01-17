@@ -7,11 +7,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "create-admin": "node scripts/create-admin.js"
+    "create-admin": "node scripts/create-admin.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@ai-sdk/google": "^1.2.0",
     "@ai-sdk/react": "^1.2.0",
+    "@stripe/stripe-js": "^8.6.1",
     "@supabase/ssr": "^0.6.0",
     "@supabase/supabase-js": "^2.49.0",
     "@tailwindcss/typography": "^0.5.19",
@@ -24,10 +29,12 @@
     "react-colorful": "^5.6.1",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "stripe": "^20.1.2",
     "zod": "^3.24.0",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
